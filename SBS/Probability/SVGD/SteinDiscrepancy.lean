@@ -5,9 +5,9 @@ Authors: Gaëtan Serré
 -/
 module
 
+public import Mathlib.MeasureTheory.Function.L2Space
 public import SBS.Analysis.InnerProductSpace.UnitBall
 public import SBS.Probability.SVGD.Basic
-public import Mathlib.MeasureTheory.Function.L2Space
 
 /-!
 # The kernelized Stein discrepancy and the steepest direction of SVGD
@@ -59,9 +59,6 @@ noncomputable section
 namespace SVGD
 
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
-
-/-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
 
 /-- The kernelized Stein discrepancy `𝔎(ν) = sup_{‖h‖ ≤ 1} E_ν[𝒜_s h]²`, the largest violation of
 Stein's identity over the unit ball of `𝓗`. It equals `‖φ*_ν‖²`

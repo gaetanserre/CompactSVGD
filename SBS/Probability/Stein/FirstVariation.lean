@@ -5,13 +5,12 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.Calculus.FDeriv.DetIdAddSMul
-public import SBS.Analysis.Normed.PerturbationOfIdentity
-public import SBS.InformationTheory.KullbackLeibler.Reweighting
-public import SBS.Probability.Stein.Operator
 public import Mathlib.Analysis.Calculus.ParametricIntegral
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
-public import Mathlib.MeasureTheory.Function.Jacobian
+public import SBS.Analysis.Calculus.FDeriv.DetIdAddSMul
+public import SBS.Analysis.Normed.PerturbationOfIdentity
+public import SBS.InformationTheory.KullbackLeibler.Transport
+public import SBS.Probability.Stein.Operator
 
 /-!
 # The first variation of the Kullback–Leibler divergence
@@ -25,16 +24,13 @@ homeomorphism of `E` mapping `Ω` onto `Ω`, and
 
   `KL(Tε#μ ‖ π) = KL(μ ‖ π) - ∫ (log p ∘ Tε - log p + log det DTε) dμ`
 
-(`InformationTheory.toReal_klDiv_map_add_smul`). No density is needed for `μ`: transporting `μ`
-forward amounts to transporting `π` backwards, and `Tε⁻¹#π` has density
-`(p ∘ Tε) · det DTε / p` with respect to `π` by the change of variables formula
-(`InformationTheory.map_symm_addSMulHomeomorph_eq_withDensity`).
+(`InformationTheory.toReal_klDiv_map_add_smul`). This is the transport formula
+`InformationTheory.toReal_klDiv_map_eq` applied to `Tε`.
 
 ## Main statements
 
-* `InformationTheory.map_symm_addSMulHomeomorph_eq_withDensity`: the density of `Tε⁻¹#π`.
 * `InformationTheory.toReal_klDiv_map_add_smul`: the Kullback–Leibler divergence of `Tε#μ`.
-* `InformationTheory.hasDerivAt_klDiv_map_add_smul`: **the first variation**,
+* `InformationTheory.hasDerivAt_toReal_klDiv_map_add_smul`: **the first variation**,
   `∂ε KL(Tε#μ ‖ π)|_{ε=0} = -E_μ[𝒜_s v]`.
 
 ## References
@@ -55,45 +51,6 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimension
   [MeasurableSpace E] [BorelSpace E] {vol : Measure E} [vol.IsAddHaarMeasure] {Ω : Set E}
   {p : E → ℝ} {v : E → E} {K : ℝ≥0} {ε : ℝ}
 
-omit [FiniteDimensional ℝ E] [MeasurableSpace E] [BorelSpace E] in
-theorem hasFDerivAt_add_smul {x : E} (hv : DifferentiableAt ℝ v x) :
-    HasFDerivAt (fun y ↦ y + ε • v y) (ContinuousLinearMap.id ℝ E + ε • fderiv ℝ v x) x :=
-  (hasFDerivAt_id x).add (hv.hasFDerivAt.const_smul ε)
-
-/-- **The backward transport of `π`.** For small `ε`, the image of `π = p · vol|_Ω` by the inverse
-of `Tε = I + ε v` has density `(p ∘ Tε) · det DTε / p` with respect to `π`. -/
-theorem map_symm_addSMulHomeomorph_eq_withDensity (hvK : LipschitzWith K v)
-    (hε : ‖ε‖₊ * K < 1) (hΩ : IsClosed Ω) (hp : Measurable p) (hp₀ : ∀ x ∈ Ω, 0 < p x)
-    (hv : Differentiable ℝ v) (hv₀ : ∀ y ∈ frontier Ω, v y = 0)
-    (hdet : ∀ x ∈ Ω, 0 < (fderiv ℝ (fun y ↦ y + ε • v y) x).det) :
-    ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)).map (hvK.addSMulHomeomorph hε).symm =
-      ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)).withDensity fun x ↦
-        .ofReal (p (x + ε • v x) * (fderiv ℝ (fun y ↦ y + ε • v y) x).det / p x) := by
-  set T := hvK.addSMulHomeomorph hε
-  have hT : ∀ x, HasFDerivAt T (fderiv ℝ (fun y ↦ y + ε • v y) x) x := fun x ↦
-    (hasFDerivAt_add_smul (hv x)).differentiableAt.hasFDerivAt
-  have hdetm : Measurable fun x ↦ (fderiv ℝ (fun y ↦ y + ε • v y) x).det :=
-    (ContinuousLinearMap.contDiff_det (𝕜 := ℝ) (E := E) (r := 0)).continuous.measurable.comp
-      (measurable_fderiv ℝ _)
-  have hw : Measurable fun x ↦ p (x + ε • v x) * (fderiv ℝ (fun y ↦ y + ε • v y) x).det / p x :=
-    ((hp.comp T.continuous.measurable).mul hdetm).div hp
-  ext A hA
-  have hTA : MeasurableSet (⇑T '' A) := T.measurableEmbedding.measurableSet_image.2 hA
-  rw [Measure.map_apply T.symm.continuous.measurable hA, Homeomorph.preimage_symm,
-    withDensity_apply _ hTA, Measure.restrict_restrict hTA,
-    withDensity_apply _ hA, setLIntegral_withDensity_eq_setLIntegral_mul _
-      hp.ennreal_ofReal hw.ennreal_ofReal hA,
-    Measure.restrict_restrict hA]
-  have himage : ⇑T '' A ∩ Ω = ⇑T '' (A ∩ Ω) := by
-    rw [image_inter T.injective, hvK.addSMulHomeomorph_image hε hΩ hv₀]
-  rw [himage, lintegral_image_eq_lintegral_abs_det_fderiv_mul vol (hA.inter hΩ.measurableSet)
-    (fun x _ ↦ (hT x).hasFDerivWithinAt) T.injective.injOn]
-  refine setLIntegral_congr_fun (hA.inter hΩ.measurableSet) fun x hx ↦ ?_
-  simp only [Pi.mul_apply]
-  rw [abs_of_pos (hdet x hx.2), ← ENNReal.ofReal_mul (hdet x hx.2).le, ← ENNReal.ofReal_mul
-    (hp₀ x hx.2).le, mul_div_cancel₀ _ (hp₀ x hx.2).ne', mul_comm]
-  rfl
-
 /-- **The Kullback–Leibler divergence of a perturbed measure.** Let `π = p · vol|_Ω`, with `Ω`
 compact and `p` continuous and positive on `Ω`, let `v` be a `C¹` `K`-Lipschitz vector field
 vanishing on the frontier of `Ω`, and let `μ` be a probability measure with `KL(μ ‖ π) < ∞`. If
@@ -110,50 +67,17 @@ theorem toReal_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
       (klDiv μ ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x))).toReal -
         ∫ x, (log (p (x + ε • v x)) - log (p x) +
           log (fderiv ℝ (fun y ↦ y + ε • v y) x).det) ∂μ := by
-  set ν := (vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)
   set T := hvK.addSMulHomeomorph hε
-  obtain ⟨hμν, hllr⟩ := klDiv_ne_top_iff.1 hμ
-  have : IsFiniteMeasure ν :=
-    isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
-  have hνΩ : ∀ᵐ x ∂ν, x ∈ Ω :=
-    (withDensity_absolutelyContinuous _ _).ae_le (ae_restrict_mem hΩ.measurableSet)
-  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := hμν.ae_le hνΩ
-  have hTΩ {x : E} (hx : x ∈ Ω) : x + ε • v x ∈ Ω := hvK.add_smul_mem hε hΩ.isClosed hv₀ hx
-  -- The weight `w = (p ∘ Tε) · det DTε / p`, its measurability, positivity and integrability.
-  set w : E → ℝ := fun x ↦ p (x + ε • v x) * (fderiv ℝ (fun y ↦ y + ε • v y) x).det / p x
+  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ
   have hdetc : Continuous fun x ↦ (fderiv ℝ (fun y ↦ y + ε • v y) x).det :=
-    (ContinuousLinearMap.contDiff_det (𝕜 := ℝ) (E := E) (r := 0)).continuous.comp
+    ContinuousLinearMap.continuous_det.comp
       ((contDiff_id.add (hv.const_smul ε)).continuous_fderiv one_ne_zero)
-  have hw : Measurable w := ((hp.comp T.continuous.measurable).mul hdetc.measurable).div hp
-  have hw₀ {x : E} (hx : x ∈ Ω) : 0 < w x :=
-    div_pos (mul_pos (hp₀ _ (hTΩ hx)) (hdet x hx)) (hp₀ x hx)
-  have hwc : ContinuousOn w Ω :=
-    ((hpc.comp T.continuous.continuousOn fun _ hx ↦ hTΩ hx).mul hdetc.continuousOn).div hpc
-      fun x hx ↦ (hp₀ x hx).ne'
-  have hlog : Integrable (fun x ↦ log (w x)) μ := by
+  have hdetμ : Integrable (fun x ↦ log (fderiv ℝ (fun y ↦ y + ε • v y) x).det) μ := by
     rw [← Measure.restrict_eq_self_of_ae_mem hμΩ]
-    exact (hwc.log fun x hx ↦ (hw₀ hx).ne').integrableOn_compact hΩ
-  -- Transport the first argument forward, or the second one backwards.
-  have hνT := map_symm_addSMulHomeomorph_eq_withDensity (vol := vol) hvK hε hΩ.isClosed hp hp₀
-    (hv.differentiable one_ne_zero) hv₀ hdet
-  have : IsFiniteMeasure (ν.withDensity fun x ↦ ENNReal.ofReal (w x)) := by
-    rw [← hνT]
-    infer_instance
-  have hmass : (ν.withDensity fun x ↦ ENNReal.ofReal (w x)).real univ = ν.real univ := by
-    rw [← hνT, measureReal_def, Measure.map_apply T.symm.continuous.measurable MeasurableSet.univ,
-      preimage_univ, measureReal_def]
-  have hmap : μ.map (fun x ↦ x + ε • v x) = μ.map T.toMeasurableEquiv := rfl
-  rw [hmap, klDiv_map_measurableEquiv_left, Homeomorph.toMeasurableEquiv_symm_coe, hνT,
-    toReal_klDiv_withDensity_right hμν hllr hw (hνΩ.mono fun _ hx ↦ hw₀ hx) hlog, hmass]
-  -- The logarithm of the weight.
-  have hlogw : (fun x ↦ log (w x)) =ᵐ[μ] fun x ↦ log (p (x + ε • v x)) - log (p x) +
-      log (fderiv ℝ (fun y ↦ y + ε • v y) x).det := by
-    filter_upwards [hμΩ] with x hx
-    rw [log_div (mul_pos (hp₀ _ (hTΩ hx)) (hdet x hx)).ne' (hp₀ x hx).ne',
-      log_mul (hp₀ _ (hTΩ hx)).ne' (hdet x hx).ne']
-    ring
-  rw [integral_congr_ae hlogw]
-  ring
+    exact (hdetc.continuousOn.log fun x hx ↦ (hdet x hx).ne').integrableOn_compact hΩ
+  exact toReal_klDiv_map_eq (e := T.toMeasurableEquiv) hΩ hp hpc hp₀
+    (fun x _ ↦ (hasFDerivAt_add_smul (hv.differentiable one_ne_zero x)).differentiableAt)
+    (hvK.addSMulHomeomorph_image hε hΩ.isClosed hv₀) hdet hdetμ hμ
 
 /-- **The first variation of the Kullback–Leibler divergence.** Let `π = p · vol|_Ω`, with `Ω`
 compact, `p` continuous and positive on `Ω`, and `log p` differentiable in the interior of `Ω` with
@@ -161,7 +85,7 @@ derivative `s`, continuous on `Ω`. Let `v` be a `C¹` Lipschitz vector field va
 frontier of `Ω`, and let `μ` be a probability measure with `KL(μ ‖ π) < ∞`. Then
 `ε ↦ KL((I + ε v)#μ ‖ π)` has derivative `-E_μ[𝒜_s v]` at `0`, where
 `𝒜_s v = s(v) + div v` is the Stein operator. -/
-theorem hasDerivAt_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
+theorem hasDerivAt_toReal_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
     {s : E → StrongDual ℝ E} (hvK : LipschitzWith K v) (hΩ : IsCompact Ω) (hp : Measurable p)
     (hpc : ContinuousOn p Ω) (hp₀ : ∀ x ∈ Ω, 0 < p x)
     (hs : ∀ x ∈ interior Ω, HasFDerivAt (fun y ↦ log (p y)) (s x) x) (hsc : ContinuousOn s Ω)
@@ -171,8 +95,7 @@ theorem hasDerivAt_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
         ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x))).toReal)
       (-∫ x, ProbabilityTheory.steinOperator s v x ∂μ) 0 := by
   set ν := (vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)
-  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := (klDiv_ne_top_iff.1 hμ).1.ae_le
-    ((withDensity_absolutelyContinuous _ _).ae_le (ae_restrict_mem hΩ.measurableSet))
+  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ
   have hvd : Differentiable ℝ v := hv.differentiable one_ne_zero
   have hD : Continuous (fderiv ℝ v) := hv.continuous_fderiv one_ne_zero
   -- The determinant along the lines `ε ↦ id + ε • A`.
@@ -184,7 +107,7 @@ theorem hasDerivAt_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
   have hJT (ε : ℝ) (x : E) : (fderiv ℝ (fun y ↦ y + ε • v y) x).det = J ε (fderiv ℝ v x) := by
     rw [(hasFDerivAt_add_smul (ε := ε) (hvd x)).fderiv]
   have hJc : Continuous fun q : ℝ × (E →L[ℝ] E) ↦ J q.1 q.2 :=
-    (ContinuousLinearMap.contDiff_det (𝕜 := ℝ) (E := E) (r := 0)).continuous.comp
+    ContinuousLinearMap.continuous_det.comp
       (continuous_const.add (continuous_fst.smul continuous_snd))
   have hdJc : Continuous fun q : ℝ × (E →L[ℝ] E) ↦ dJ q.1 q.2 :=
     ((ContinuousLinearMap.contDiff_det (𝕜 := ℝ) (E := E) (r := 1)).continuous_fderiv
@@ -209,12 +132,13 @@ theorem hasDerivAt_klDiv_map_add_smul {μ : Measure E} [IsProbabilityMeasure μ]
       _ < 1 := by rw [div_mul_eq_mul_div, one_mul, div_lt_one (by positivity)]; linarith
   have hJ {ε : ℝ} (hε : ε ∈ Metric.ball (0 : ℝ) ε₀) {x : E} (hx : x ∈ Ω) :
       1 / 2 ≤ J ε (fderiv ℝ v x) := by
-    have hε' : |ε| < min δ 1 := by simpa using (mem_ball_zero_iff.1 hε).trans_le (min_le_left _ _)
+    have hε' : |ε| < min δ 1 := by
+      simpa using (mem_ball_zero_iff.1 hε).trans_le (min_le_left _ _)
+    have hε1 := lt_min_iff.1 hε'
     have h := hδJ (ε, fderiv ℝ v x)
-      ⟨⟨by linarith [neg_abs_le ε, lt_min_iff.1 hε'], by linarith [le_abs_self ε, lt_min_iff.1 hε']⟩,
-        mem_image_of_mem _ hx⟩
+      ⟨⟨by linarith [neg_abs_le ε], by linarith [le_abs_self ε]⟩, mem_image_of_mem _ hx⟩
       (0, fderiv ℝ v x) ⟨⟨by norm_num, by norm_num⟩, mem_image_of_mem _ hx⟩
-      (by simpa [Prod.dist_eq] using (lt_min_iff.1 hε').1)
+      (by simpa [Prod.dist_eq] using hε1.1)
     have h0 : J 0 (fderiv ℝ v x) = 1 := by simp [J]
     rw [h0, Real.dist_eq] at h
     linarith [abs_lt.1 h]

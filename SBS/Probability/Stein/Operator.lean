@@ -5,10 +5,10 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.Calculus.Divergence
 public import Mathlib.Analysis.Calculus.LocalExtr.Basic
 public import Mathlib.Analysis.Normed.Operator.BoundedLinearMaps
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
+public import SBS.Analysis.Calculus.Divergence
 
 /-!
 # The Langevin Stein operator

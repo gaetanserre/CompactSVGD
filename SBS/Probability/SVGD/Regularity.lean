@@ -5,10 +5,10 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Probability.SVGD.Basic
 public import Mathlib.Analysis.Convex.Integral
 public import Mathlib.Analysis.Convex.TotallyBounded
 public import Mathlib.Topology.UniformSpace.HeineCantor
+public import SBS.Probability.SVGD.Basic
 
 /-!
 # Regularity of the update direction of SVGD
@@ -43,9 +43,6 @@ noncomputable section
 namespace SVGD
 
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
-
-/-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
 
 variable {Φ : EuclideanSpace ℝ (Fin d) → H₀}
   {s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d))}

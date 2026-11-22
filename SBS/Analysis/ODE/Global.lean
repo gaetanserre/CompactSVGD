@@ -13,18 +13,19 @@ public import Mathlib.Analysis.ODE.ExistUnique
 Let `v : ℝ → E → E` be a time-dependent vector field on a Banach space `E`, which is continuous in
 time, `K`-Lipschitz in space and bounded by `L`. Then for every initial condition `(t₀, x₀)`, the
 ODE `α' t = v t (α t)` has a solution defined on all of `ℝ`
-(`exists_forall_hasDerivAt_of_lipschitzWith`), which is unique by `ODE_solution_unique_univ`.
+(`ODE.exists_forall_hasDerivAt_of_lipschitzWith`), which is unique by `ODE_solution_unique_univ`.
 
 We also prove an invariance principle: if every point of the frontier of a closed set `s` is an
 equilibrium of `v`, then a solution that meets `s` stays in `s` forever, in both time directions
-(`mem_of_forall_frontier_eq_zero`). Indeed a solution leaving `s` must cross its frontier, and the
-solution through an equilibrium is constant.
+(`ODE.mem_of_forall_frontier_eq_zero`). Indeed a solution leaving `s` must cross its frontier,
+and the solution through an equilibrium is constant.
 
 ## Main statements
 
-* `exists_forall_hasDerivAt_of_lipschitzWith`: global existence.
-* `mem_of_forall_frontier_eq_zero`: invariance of a closed set whose frontier consists of
-  equilibria.
+* `ODE.exists_forall_hasDerivAt_of_lipschitzWith`: global existence.
+* `ODE.eq_const_of_forall_eq_zero`: the solution through an equilibrium is constant.
+* `ODE.mem_of_forall_frontier_eq_zero`, `ODE.mem_interior_of_forall_frontier_eq_zero`:
+  invariance of a closed set whose frontier consists of equilibria, and of its interior.
 -/
 
 @[expose] public section
@@ -32,6 +33,8 @@ solution through an equilibrium is constant.
 open Set Metric
 
 open scoped NNReal Topology
+
+namespace ODE
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {v : ℝ → E → E} {K : ℝ≥0}
 
@@ -92,6 +95,15 @@ theorem exists_forall_hasDerivAt_of_lipschitzWith [CompleteSpace E] {L : ℝ≥0
   rw [hev.eq_of_nhds]
   exact hβN.congr_of_eventuallyEq hev
 
+/-- **Equilibria.** A solution of `α' = v t α` through a common zero of the fields `v t` is
+constant. -/
+theorem eq_const_of_forall_eq_zero (hv : ∀ t, LipschitzWith K (v t)) {α : ℝ → E}
+    (hα : ∀ t, HasDerivAt α (v t (α t)) t) {t₀ : ℝ} (h₀ : ∀ t, v t (α t₀) = 0) :
+    α = fun _ ↦ α t₀ :=
+  ODE_solution_unique_univ (s := fun _ ↦ univ) (t₀ := t₀) (fun t ↦ (hv t).lipschitzOnWith)
+    (fun t ↦ ⟨hα t, trivial⟩)
+    (fun t ↦ ⟨by simpa [h₀ t] using hasDerivAt_const t (α t₀), trivial⟩) rfl
+
 /-- **Invariance of a closed set whose frontier consists of equilibria.** Let `v` be Lipschitz in
 space, and let `s` be a closed set such that `v t y = 0` for every `y ∈ frontier s`. Then a solution
 of `α' = v t α` that meets `s` at some time stays in `s` at all times. -/
@@ -101,9 +113,7 @@ theorem mem_of_forall_frontier_eq_zero {s : Set E} (hs : IsClosed s)
   have hαc : Continuous α := continuous_iff_continuousAt.2 fun t ↦ (hα t).continuousAt
   -- If `α` meets the frontier of `s`, then it is constant, equal to an equilibrium.
   have hconst {τ : ℝ} (hτ : α τ ∈ frontier s) : α = fun _ ↦ α τ :=
-    ODE_solution_unique_univ (s := fun _ ↦ univ) (t₀ := τ) (fun t ↦ (hv t).lipschitzOnWith)
-      (fun t ↦ ⟨hα t, trivial⟩) (fun t ↦ ⟨by simpa [h₀ t _ hτ] using hasDerivAt_const t (α τ),
-        trivial⟩) rfl
+    eq_const_of_forall_eq_zero hv hα fun t ↦ h₀ t _ hτ
   by_contra ht
   -- Otherwise, the connected set `α '' [t₀, t]` meets `s` and its complement, but not the
   -- frontier of `s`, which is impossible.
@@ -122,3 +132,18 @@ theorem mem_of_forall_frontier_eq_zero {s : Set E} (hs : IsClosed s)
       by_contra fun hi ↦ hfr t₀ left_mem_uIcc ⟨subset_closure ht₀, hi⟩⟩
     ⟨α t, ⟨t, right_mem_uIcc, rfl⟩, by rwa [hs.closure_eq]⟩
   exact hτ₂ (interior_subset_closure hτ₁)
+
+/-- **Invariance of the interior.** Under the assumptions of `mem_of_forall_frontier_eq_zero`, a
+solution that meets the interior of `s` at some time stays in the interior of `s` at all times.
+Indeed, a solution through a point of the frontier is constant. -/
+theorem mem_interior_of_forall_frontier_eq_zero {s : Set E} (hs : IsClosed s)
+    (hv : ∀ t, LipschitzWith K (v t)) (h₀ : ∀ t, ∀ y ∈ frontier s, v t y = 0) {α : ℝ → E}
+    (hα : ∀ t, HasDerivAt α (v t (α t)) t) {t₀ : ℝ} (ht₀ : α t₀ ∈ interior s) (t : ℝ) :
+    α t ∈ interior s := by
+  by_contra ht
+  have hfr : α t ∈ frontier s :=
+    ⟨subset_closure (mem_of_forall_frontier_eq_zero hs hv h₀ hα (interior_subset ht₀) t), ht⟩
+  have heq : α t₀ = α t := congrFun (eq_const_of_forall_eq_zero hv hα fun τ ↦ h₀ τ _ hfr) t₀
+  exact ht (heq ▸ ht₀)
+
+end ODE

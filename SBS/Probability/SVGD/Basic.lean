@@ -5,9 +5,9 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Probability.Stein.Operator
 public import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 public import Mathlib.MeasureTheory.Integral.Bochner.Basic
+public import SBS.Probability.Stein.Operator
 
 /-!
 # The objects of Stein Variational Gradient Descent
@@ -41,6 +41,11 @@ The pairing `⟪h, ξₓ⟫_𝓗` is the Stein operator `𝒜_s` applied to the 
 * `SVGD.norm_pairing_apply_le`: `‖(⟪hᵢ, u⟫)ᵢ‖ ≤ ‖h‖ ‖u‖`, by the Cauchy–Schwarz inequality.
 * `SVGD.inner_steinFeature`: `⟪h, ξₓ⟫ = 𝒜_s (toVectorField Φ h) x`.
 
+## Notation
+
+* `𝓗[d, H₀]`: the product space `H₀ᵈ = PiLp 2 fun _ : Fin d ↦ H₀` of the update directions,
+  scoped in the `SVGD` namespace.
+
 ## References
 
 * [Q. Liu, D. Wang, *Stein Variational Gradient Descent*][Liu2016SVGD]
@@ -58,7 +63,7 @@ namespace SVGD
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
 
 /-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
+scoped notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
 
 /-! ### The vector field of an element of `𝓗` -/
 
@@ -96,7 +101,6 @@ theorem hasFDerivAt_toVectorField {Φ' : EuclideanSpace ℝ (Fin d) →L[ℝ] H�
     HasFDerivAt (toVectorField Φ h) ((pairing h).comp Φ') y :=
   (pairing h).hasFDerivAt.comp y hΦ
 
-
 /-- The Cauchy–Schwarz inequality for the pairing: `‖(⟪hᵢ, u⟫)ᵢ‖ ≤ ‖h‖ ‖u‖`. -/
 theorem norm_pairing_apply_le (h : 𝓗[d, H₀]) (u : H₀) : ‖pairing h u‖ ≤ ‖h‖ * ‖u‖ := by
   refine (pow_le_pow_iff_left₀ (norm_nonneg _) (by positivity) two_ne_zero).1 ?_
@@ -104,6 +108,24 @@ theorem norm_pairing_apply_le (h : 𝓗[d, H₀]) (u : H₀) : ‖pairing h u‖
   refine Finset.sum_le_sum fun i _ ↦ ?_
   rw [← mul_pow, ← sq_abs]
   exact pow_le_pow_left₀ (abs_nonneg _) (by simpa using abs_real_inner_le_norm (h i) u) 2
+
+/-- The operator norm of the pairing is at most `‖h‖`. -/
+theorem norm_pairing_le (h : 𝓗[d, H₀]) : ‖pairing h‖ ≤ ‖h‖ :=
+  (pairing h).opNorm_le_bound (norm_nonneg _) (norm_pairing_apply_le h)
+
+/-- The pairing is `1`-Lipschitz in `h`, for the operator norm. -/
+theorem lipschitzWith_pairing :
+    LipschitzWith 1 (pairing : 𝓗[d, H₀] → H₀ →L[ℝ] EuclideanSpace ℝ (Fin d)) :=
+  LipschitzWith.of_dist_le_mul fun h h' ↦ by
+    have : pairing h - pairing h' = pairing (h - h') :=
+      ContinuousLinearMap.ext fun u ↦ pairing_sub h h' u
+    rw [dist_eq_norm, dist_eq_norm, NNReal.coe_one, one_mul, this]
+    exact norm_pairing_le _
+
+/-- The pairing is continuous in `h`, for the operator norm. -/
+theorem continuous_pairing :
+    Continuous (pairing : 𝓗[d, H₀] → H₀ →L[ℝ] EuclideanSpace ℝ (Fin d)) :=
+  lipschitzWith_pairing.continuous
 
 theorem norm_toVectorField_le : ‖toVectorField Φ h y‖ ≤ ‖h‖ * ‖Φ y‖ :=
   norm_pairing_apply_le h (Φ y)
@@ -119,7 +141,6 @@ theorem norm_toVectorField_sub_toVectorField_le :
   exact norm_pairing_apply_le _ _
 
 /-! ### The update direction -/
-
 
 /-- The element `ξₓ = s(x) k(·, x) + ∇ₓ k(·, x)` of `𝓗`, whose components are
 `(ξₓ)ᵢ = s x eᵢ • Φ x + ∂ᵢ Φ x`. -/

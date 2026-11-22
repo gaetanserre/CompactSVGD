@@ -14,13 +14,22 @@ lake build
 
 The project depends on Mathlib and on [Tau Ceti](https://github.com/TauCetiProject/TauCeti)
 (Lean `v4.37.0-rc1`). Mathlib is pinned to the commit of Tau Ceti's manifest; bump both together.
-Tau Ceti is used in three places: the divergence theorem on balls
-(`TauCeti.setIntegral_ball_trace_fderiv`, in `DivergenceTheorem/Ball.lean`), Schauder's
-fixed-point theorem (`TauCeti.schauderFixedPoint_closedConvex_continuousOn`, in
-`SVGD/MeanField.lean`), and the smoothness of the determinant with Jacobi's formula
-(`ContinuousLinearMap.contDiff_det`, `Matrix.hasDerivAt_det_one_add_smul`, in
-`FDeriv/DetIdAddSMul.lean`). `lake build` compiles the Tau Ceti modules it needs from source, in about a
-minute. Every other file depends on Mathlib only.
+Tau Ceti provides:
+
+* the divergence theorem on balls (`TauCeti.setIntegral_ball_trace_fderiv`, in
+  `DivergenceTheorem/Ball.lean`);
+* Schauder's fixed-point theorem (`TauCeti.schauderFixedPoint_closedConvex_continuousOn`, in
+  `SVGD/MeanField.lean`);
+* the smoothness of the determinant and Jacobi's formula (`ContinuousLinearMap.contDiff_det`,
+  `Matrix.hasDerivAt_det_one_add_smul`, in `FDeriv/DetIdAddSMul.lean` and
+  `Stein/FirstVariation.lean`), and the measurability of Jacobian determinants
+  (`TauCeti.measurable_det_fderiv`);
+* the global solutions of nonautonomous Lipschitz ODEs (`ODE.nonautonomousSolution`, in
+  `ODE/FlowHomeomorph.lean` and `ODE/FlowJacobian.lean`);
+* the invariance of the Kullback–Leibler divergence under measurable equivalences
+  (`MeasureTheory.Measure.klDiv_map_measurableEquiv`, in `KullbackLeibler/Reweighting.lean`).
+
+`lake build` compiles the Tau Ceti modules it needs from source, in about a minute.
 
 ## Contents
 
@@ -37,19 +46,28 @@ minute. Every other file depends on Mathlib only.
 | `SBS/Probability/Stein/Box.lean` | on a box, Stein class ⟺ zero boundary flux (the paper's Definition A.2) |
 | `SBS/Probability/Stein/Ball.lean` | on a ball, open or closed, Stein class ⟺ zero flux through the sphere |
 | `SBS/Probability/Stein/Identity.lean` | **Lemma A.3** (Stein's identity) and its converse |
-| `SBS/Analysis/ODE/Global.lean` | global solutions for bounded Lipschitz fields; invariance of a closed set whose frontier consists of equilibria |
+| `SBS/Analysis/ODE/Global.lean` | global solutions for bounded Lipschitz fields; trajectories through equilibria are constant; invariance of a closed set whose frontier consists of equilibria, and of its interior |
 | `SBS/Topology/Order/Gluing.lean` | gluing continuous functions along the intervals `[n, n + 1]` |
 | `SBS/Probability/SVGD/Basic.lean` | `toVectorField Φ h`, `ξₓ = steinFeature Φ s x`, `φ*_ν = direction Φ s ν`; `⟪h, ξₓ⟫ = 𝒜_s h (x)` |
 | `SBS/Probability/SVGD/Regularity.lean` | Lemma A.6: `ξ` continuous, bounded, uniformly continuous on `Ω`; `φ*_ν` lies in the compact `closedConvexHull (ξ '' Ω)` |
-| `SBS/Probability/SVGD/Trajectory.lean` | trajectories of the vector field of a curve `m : ℝ → 𝓗`: existence, uniqueness, flow property, invariance of `Ω`, Grönwall estimates |
+| `SBS/Probability/SVGD/Trajectory.lean` | trajectories of the vector field of a curve `m : ℝ → 𝓗`: existence, uniqueness, flow property, time-`t` maps are homeomorphisms of `ℝᵈ`, invariance of `Ω`, Grönwall estimates |
 | `SBS/Probability/SVGD/MeanField.lean` | `AdmissibleFeatureMap`; McKean–Vlasov equation on `[a, b]` by Schauder's theorem |
 | `SBS/Probability/SVGD/Flow.lean` | **the mean-field SVGD flow on `[0, ∞)`** (`SVGD.exists_flow`) |
 | `SBS/Analysis/InnerProductSpace/UnitBall.lean` | `v / ‖v‖` is the unique maximizer of `⟪·, v⟫` on the unit ball; `⨆_{‖h‖ ≤ 1} ⟪h, v⟫² = ‖v‖²` |
 | `SBS/Probability/SVGD/SteinDiscrepancy.lean` | **Theorem A.7**: `E_ν[𝒜_s h] = ⟪h, φ*_ν⟫`, `𝔎(ν) = ‖φ*_ν‖²`, `φ*_ν / ‖φ*_ν‖` is the unique steepest direction |
 | `SBS/Analysis/Normed/PerturbationOfIdentity.lean` | `x ↦ x + ε • v x` is a homeomorphism for `|ε| Lip(v) < 1`, mapping `Ω` onto `Ω` when `v = 0` on `frontier Ω` |
 | `SBS/Analysis/Calculus/FDeriv/DetIdAddSMul.lean` | Jacobi's formula: `t ↦ det (id + t • A)` has derivative `trace A` at `0` (Tau Ceti) |
-| `SBS/InformationTheory/KullbackLeibler/Reweighting.lean` | `KL(e#μ ‖ e#ν) = KL(μ ‖ ν)` for measurable equivalences; KL against a reweighted reference measure |
-| `SBS/Probability/Stein/FirstVariation.lean` | core of **Theorem A.8**: `∂ε KL((I + ε v)#μ ‖ π)|_{ε=0} = -E_μ[𝒜_s v]` |
+| `SBS/InformationTheory/KullbackLeibler/Reweighting.lean` | `KL(e#μ ‖ ν) = KL(μ ‖ e⁻¹#ν)` for measurable equivalences; KL against a reweighted reference measure, and its finiteness |
+| `SBS/MeasureTheory/Function/Jacobian.lean` | `e⁻¹#(p · vol\|_Ω)` has density `(p ∘ e) · det De / p` with respect to `p · vol\|_Ω` |
+| `SBS/InformationTheory/KullbackLeibler/Transport.lean` | `KL(e#μ ‖ π) = KL(μ ‖ π) - ∫ (log p ∘ e - log p + log det De) dμ` for a measurable equivalence `e` mapping `Ω` onto `Ω`; `KL(e#μ ‖ π) < ∞` |
+| `SBS/Probability/Stein/FirstVariation.lean` | first variation of the KL divergence: `∂ε KL((I + ε v)#μ ‖ π)|_{ε=0} = -E_μ[𝒜_s v]` |
+| `SBS/Probability/SVGD/SteepestDescent.lean` | **Theorem A.8**: `φ*_μ / ‖φ*_μ‖` is the unique steepest descent direction of `KL(· ‖ π)` in the unit ball of `𝓗`, and the first variation along `φ*_μ` is `-𝔎(μ)` |
+| `SBS/Analysis/ODE/InitialCondition.lean` | differentiability of a flow with respect to the initial condition, in both time directions: `D(α · t) = J t`, where `J` solves the variational equation |
+| `SBS/Analysis/ODE/Liouville.lean` | Liouville's formula `(det J)' = trace A · det J` for `J' = A ∘ J`; positivity and log-Lipschitz bound for solutions of `f' = c f` |
+| `SBS/Analysis/ODE/FlowHomeomorph.lean` | the time-`t` map of a uniformly Lipschitz field is a homeomorphism, mapping `Ω` onto `Ω` when the field vanishes on `frontier Ω` (Tau Ceti) |
+| `SBS/Analysis/ODE/FlowJacobian.lean` | the Jacobian of a flow: variational equation, `∂ₜ det D(α · t) = div vₜ ∘ (α · t) · det D(α · t)`, `det > 0`, `|log det| ≤ ‖trace‖ K |t|` |
+| `SBS/Probability/Stein/Dissipation.lean` | dissipation of the KL divergence along any flow: `∂ₜ KL(μₜ ‖ π) = -E_{μₜ}[𝒜_s vₜ]`, and `KL(μₜ ‖ π) < ∞` |
+| `SBS/Probability/SVGD/Dissipation.lean` | **Theorem A.11**: `∂ₜ KL(μₜ ‖ π) = -𝔎(μₜ)` along the mean-field SVGD flow, `KL(μₜ ‖ π) = KL(μ ‖ π) - ∫₀ᵗ 𝔎(μ_τ) dτ`, monotonicity |
 
 ## Lemma A.3 (Stein's identity)
 
@@ -125,13 +143,76 @@ uniqueness: the McKean–Vlasov equation is solved by Schauder's fixed-point the
 concatenated. The conditions on `Φ` only matter near `Ω`, so they can be met by modifying `Φ` away
 from `Ω`.
 
+## Theorems A.7 and A.8: why SVGD moves along `φ*`
+
+For `h ∈ 𝓗`, write `𝒜_s h` for the Stein operator applied to the vector field of `h`.
+
+* **A.7** (`SVGD/SteinDiscrepancy.lean`). `E_ν[𝒜_s h] = ⟪h, φ*_ν⟫`, so the kernelized Stein
+  discrepancy `𝔎(ν) = sup_{‖h‖ ≤ 1} E_ν[𝒜_s h]²` equals `‖φ*_ν‖²`, and `φ*_ν / ‖φ*_ν‖` is the unique
+  direction of the unit ball along which Stein's identity is most violated (when `φ*_ν ≠ 0`).
+* **A.8** (`SVGD/SteepestDescent.lean`). The first variation
+  `klFirstVariation Φ π μ h = ∂ε KL((I + ε h)#μ ‖ π)|_{ε=0}` equals `-⟪h, φ*_μ⟫`. Hence
+  `φ*_μ / ‖φ*_μ‖` is the unique minimizer on the unit ball, with minimum `-‖φ*_μ‖`, and the first
+  variation along `φ*_μ` is `-𝔎(μ)`.
+
+The hypotheses of A.8 are those of Part 1 together with a density for the target:
+`π = p · λ|_Ω` with `p` continuous and positive on `Ω`, `log p` differentiable in the interior of `Ω`
+with derivative `s`, and `KL(μ ‖ π) < ∞`. No density is needed for `μ`, and no regularity of `∂Ω`.
+The proof transports `π` backwards instead of `μ` forwards: `KL(Tε#μ ‖ π) = KL(μ ‖ Tε⁻¹#π)`, and
+`Tε⁻¹#π` has density `(p ∘ Tε) · det DTε / p` with respect to `π` by the change of variables formula.
+This transport formula holds for any measurable equivalence `e` that is differentiable on `Ω`, maps
+`Ω` onto `Ω`, and has a positive Jacobian determinant with `μ`-integrable logarithm
+(`InformationTheory.toReal_klDiv_map_eq`). The same formula gives Theorem A.11.
+
+## Theorem A.11: the KL divergence decreases along SVGD
+
+```lean
+theorem SVGD.hasDerivAt_toReal_klDiv_map_trajectory_of_eq_direction
+    (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCompact Ω)
+    (hπ : π = (volume.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x))
+    (hp : Measurable p) (hpc : ContinuousOn p Ω) (hp₀ : ∀ x ∈ Ω, 0 < p x)
+    (hμ : klDiv μ π ≠ ∞) (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
+    (hs : ∀ x ∈ interior Ω, HasFDerivAt (fun y ↦ Real.log (p y)) (s x) x)
+    (hsc : ContinuousOn s Ω)
+    (hmφ : ∀ t, 0 ≤ t → m t = direction Φ s (μ.map (trajectory Φ m 0 · t)))
+    {t : ℝ} (ht : 0 ≤ t) :
+    HasDerivAt (fun t ↦ (klDiv (μ.map (trajectory Φ m 0 · t)) π).toReal)
+      (-kernelSteinDiscrepancy Φ s (μ.map (trajectory Φ m 0 · t))) t
+```
+
+The curve `m` is the one given by `SVGD.exists_meanField`, so `μₜ = (Tₜ)#μ` with
+`Tₜ = trajectory Φ m 0 · t` is the mean-field SVGD flow of Part 1. The hypotheses are those of A.8:
+nothing is assumed on `μₜ`. The file also proves that `KL(μₜ ‖ π)` stays finite
+(`SVGD.klDiv_map_trajectory_ne_top`), the integrated form
+`KL(μₜ ‖ π) = KL(μ ‖ π) - ∫₀ᵗ 𝔎(μ_τ) dτ` (`SVGD.toReal_klDiv_map_trajectory_eq`), that
+`t ↦ KL(μₜ ‖ π)` is antitone on `[0, ∞)`, and that `∫₀ᵗ 𝔎(μ_τ) dτ ≤ KL(μ ‖ π)`
+(`SVGD.integral_kernelSteinDiscrepancy_le`), with `τ ↦ 𝔎(μ_τ)` integrable on `[0, t]`. The last
+bound is what the analysis of Part 2 needs.
+
+The proof is Lagrangian and does not use Theorem A.10 (the transport equation).
+
+1. The flow maps `Tₜ` are homeomorphisms of `ℝᵈ` mapping `Ω` onto `Ω`, for every `t ∈ ℝ`
+   (`ODE.isHomeomorph_flow`, `ODE.image_flow_eq`).
+2. `x ↦ Tₜ x` is differentiable and `DTₜ x` solves the variational equation
+   `∂ₜ DTₜ x = Dvₜ(Tₜ x) ∘ DTₜ x` (`ODE.hasDerivAt_fderiv_flow`). By Liouville's formula,
+   `∂ₜ det DTₜ x = div vₜ (Tₜ x) · det DTₜ x`, so `det DTₜ x > 0` and `|log det DTₜ x| ≤ ‖trace‖ K |t|`.
+3. The transport formula gives
+   `KL(μₜ ‖ π) = KL(μ ‖ π) - ∫ (log p ∘ Tₜ - log p + log det DTₜ) dμ` at every time.
+4. The time derivative of the integrand is `𝒜_s vₜ ∘ Tₜ`. Trajectories through `frontier Ω` are
+   constant and those through `interior Ω` stay in `interior Ω`, which is where `log p` is
+   differentiable. Differentiation under the integral sign is dominated by
+   `sup ‖s‖ · sup ‖v‖ + ‖trace‖ K`. Thus `∂ₜ KL(μₜ ‖ π) = -E_{μₜ}[𝒜_s vₜ]`
+   (`InformationTheory.hasDerivAt_toReal_klDiv_map_flow`, for any flow).
+5. By A.7, `E_{μₜ}[𝒜_s vₜ] = ⟪m t, φ*_{μₜ}⟫`, which is `‖φ*_{μₜ}‖² = 𝔎(μₜ)` when `m t = φ*_{μₜ}`.
+
 ## Roadmap for the full formalization
 
 The theory has two parts, linked by Theorem A.11.
 
 1. **Construction of the flow.** Existence of `(Tₜ)_{t ≥ 0}` with `∂ₜ Tₜ(x) = φ*_{μₜ}(Tₜ(x))`,
    `μₜ = (Tₜ)#μ₀` and `Tₜ(Ω) = Ω`. The paper assumes this flow (hypothesis of Theorem 3.1).
-2. **Bridge, Theorem A.11.** `∂ₜ KL(μₜ ‖ π) = -𝔎(μₜ | π)`.
+2. **Bridge, Theorem A.11.** `∂ₜ KL(μₜ ‖ π) = -𝔎(μₜ | π)`. Formalized
+   (`SVGD.hasDerivAt_toReal_klDiv_map_trajectory_of_eq_direction`).
 3. **Analysis of the measure flow.** Barbalat, cluster points, Proposition 3.2, Theorem 3.1. This
    part is already formalized in the paper's repository, with Theorem A.11 as a hypothesis.
 
@@ -172,8 +253,9 @@ Comments.
 ### Next steps
 
 1. ~~Part 1: existence of the mean-field flow~~ (`SVGD.exists_flow`).
-2. Theorem A.11 in Lagrangian coordinates: `C¹` dependence of `Tₜ` on `x`, Liouville's formula
-   `∂ₜ det DTₜ = (div φ*_{μₜ}) ∘ Tₜ · det DTₜ`, change of variables, `klDiv`.
+   ~~Theorems A.7 and A.8~~ (`SVGD.kernelSteinDiscrepancy_eq`, `SVGD.isMinOn_klFirstVariation`).
+2. ~~Theorem A.11 in Lagrangian coordinates~~
+   (`SVGD.hasDerivAt_toReal_klDiv_map_trajectory_of_eq_direction`, `SVGD.toReal_klDiv_map_trajectory_eq`).
 3. Port Part 2 from the paper's repository on top of `SVGD.exists_flow`, with Theorem A.11 proved
    instead of assumed.
 4. Stein class criterion for fields vanishing on `∂Ω`, for an arbitrary compact `Ω`.

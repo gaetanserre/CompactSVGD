@@ -5,10 +5,10 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Probability.SVGD.Regularity
-public import SBS.Probability.SVGD.Trajectory
 public import Mathlib.Topology.ContinuousMap.Bounded.ArzelaAscoli
 public import Mathlib.Topology.Order.ProjIcc
+public import SBS.Probability.SVGD.Regularity
+public import SBS.Probability.SVGD.Trajectory
 public import TauCeti.Analysis.Convex.SchauderFixedPoint
 
 /-!
@@ -66,9 +66,6 @@ namespace SVGD
 
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
 
-/-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
-
 /-- The assumptions on the feature map `Φ` of the kernel for the SVGD flow on `Ω`: `Φ` is `C¹`,
 `K`-Lipschitz and bounded by `C`, and it vanishes on the frontier of `Ω`. The last condition makes
 every update direction vanish on the frontier of `Ω`, so that the particles stay in `Ω`. Only the
@@ -76,9 +73,13 @@ values of `Φ` near `Ω` matter, so that the global conditions can always be met
 away from `Ω`. -/
 structure AdmissibleFeatureMap (Φ : EuclideanSpace ℝ (Fin d) → H₀)
     (Ω : Set (EuclideanSpace ℝ (Fin d))) (K C : ℝ≥0) : Prop where
+  /-- `Φ` is continuously differentiable. -/
   contDiff : ContDiff ℝ 1 Φ
+  /-- `Φ` is `K`-Lipschitz. -/
   lipschitzWith : LipschitzWith K Φ
+  /-- `Φ` is bounded by `C`. -/
   norm_le : ∀ y, ‖Φ y‖ ≤ C
+  /-- `Φ` vanishes on the frontier of `Ω`. -/
   eq_zero_of_mem_frontier : ∀ y ∈ frontier Ω, Φ y = 0
 
 variable [CompleteSpace H₀] {Φ : EuclideanSpace ℝ (Fin d) → H₀}
@@ -164,10 +165,10 @@ theorem exists_meanField_Icc (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCom
   have hext {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) :
       Continuous (IccExtend hab ⇑g) ∧ ∀ τ, ‖IccExtend hab (⇑g) τ‖ ≤ B :=
     ⟨g.continuous.Icc_extend', fun τ ↦ hB _ (hg _)⟩
-  have htraj {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) {t : ℝ} (ht : a ≤ t) :
+  have htraj {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (t : ℝ) :
       Continuous (trajectory Φ (IccExtend hab ⇑g) a · t) ∧
         ∀ x ∈ Ω, trajectory Φ (IccExtend hab ⇑g) a x t ∈ Ω :=
-    ⟨continuous_trajectory_apply (hext hg).1 (hext hg).2 hΦ.lipschitzWith hΦ.norm_le ht,
+    ⟨continuous_trajectory_apply (hext hg).1 (hext hg).2 hΦ.lipschitzWith hΦ.norm_le a t,
       fun _ hx ↦ trajectory_mem (hext hg).1 (hext hg).2 hΦ.lipschitzWith hΦ.norm_le
         hΩ.isClosed hΦ.eq_zero_of_mem_frontier hx t⟩
   -- The fixed-point map, on raw functions.
@@ -175,7 +176,7 @@ theorem exists_meanField_Icc (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCom
     direction Φ s (ν.map (trajectory Φ (IccExtend hab ⇑g) a · t))
   have hFS {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (t : Icc a b) : F g t ∈ 𝒦 := by
     exact direction_mem_closedConvexHull hΩ hΦ.contDiff hs
-      (ae_mem_map hΩ hν (htraj hg t.property.1).1 (htraj hg t.property.1).2)
+      (ae_mem_map hΩ hν (htraj hg t).1 (htraj hg t).2)
   -- Uniform continuity of `ξ` on `Ω`.
   have hξ := Metric.uniformContinuousOn_iff.1
     (uniformContinuousOn_steinFeature hΩ hΦ.contDiff hs)
@@ -186,11 +187,11 @@ theorem exists_meanField_Icc (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCom
     obtain ⟨η, hη, hηξ⟩ := hξ ε hε
     refine ⟨η / (B * C + 1), by positivity, fun g hg t t' htt' ↦ ?_⟩
     rw [dist_eq_norm]
-    refine norm_direction_map_sub_direction_map_le hΩ hΦ.contDiff hs hν (htraj hg t.property.1).1
-      (htraj hg t'.property.1).1 (htraj hg t.property.1).2 (htraj hg t'.property.1).2
+    refine norm_direction_map_sub_direction_map_le hΩ hΦ.contDiff hs hν (htraj hg t).1
+      (htraj hg t').1 (htraj hg t).2 (htraj hg t').2
       (fun x hx y hy hxy ↦ (hηξ x hx y hy hxy).le) fun x _ ↦ ?_
     calc dist (trajectory Φ (IccExtend hab ⇑g) a x t) (trajectory Φ (IccExtend hab ⇑g) a x t')
-        ≤ B * C * dist (t : ℝ) t' :=
+      _ ≤ B * C * dist (t : ℝ) t' :=
           dist_trajectory_le (hext hg).1 (hext hg).2 hΦ.lipschitzWith hΦ.norm_le a x t t'
       _ ≤ B * C * (η / (B * C + 1)) := by gcongr; exact htt'.le
       _ < η := by
@@ -221,15 +222,15 @@ theorem exists_meanField_Icc (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCom
     refine ((BoundedContinuousFunction.dist_le (half_pos hε).le).2 fun t ↦ ?_).trans_lt
       (half_lt_self hε)
     rw [hG hg', hG hg, dist_eq_norm]
-    refine norm_direction_map_sub_direction_map_le hΩ hΦ.contDiff hs hν (htraj hg' t.property.1).1
-      (htraj hg t.property.1).1 (htraj hg' t.property.1).2 (htraj hg t.property.1).2
+    refine norm_direction_map_sub_direction_map_le hΩ hΦ.contDiff hs hν (htraj hg' t).1
+      (htraj hg t).1 (htraj hg' t).2 (htraj hg t).2
       (fun x hx y hy hxy ↦ (hηξ x hx y hy hxy).le) fun x _ ↦ ?_
     have hδ' : ∀ τ ∈ Icc a t, ‖IccExtend hab (⇑g') τ - IccExtend hab (⇑g) τ‖ ≤ dist g' g :=
       fun τ _ ↦ by
         rw [← dist_eq_norm]
         exact BoundedContinuousFunction.dist_coe_le_dist (f := g') (g := g) _
     calc dist (trajectory Φ (IccExtend hab ⇑g') a x t) (trajectory Φ (IccExtend hab ⇑g) a x t)
-        ≤ gronwallBound 0 (B * K) (C * dist g' g) (t - a) :=
+      _ ≤ gronwallBound 0 (B * K) (C * dist g' g) (t - a) :=
           dist_trajectory_trajectory_le_of_dist_le (hext hg').1 (hext hg').2 hΦ.lipschitzWith
             hΦ.norm_le (hext hg).1 (hext hg).2 t.property.1 hδ' x
       _ ≤ gronwallBound 0 (B * K) (C * dist g' g) (b - a) :=

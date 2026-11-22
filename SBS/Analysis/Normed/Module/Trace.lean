@@ -5,8 +5,8 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import Mathlib.LinearAlgebra.Trace
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
+public import Mathlib.LinearAlgebra.Trace
 
 /-!
 # The trace of a continuous linear map

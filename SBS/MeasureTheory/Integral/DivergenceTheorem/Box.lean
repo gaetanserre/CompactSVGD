@@ -5,8 +5,8 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.Calculus.Divergence
 public import Mathlib.MeasureTheory.Integral.DivergenceTheorem
+public import SBS.Analysis.Calculus.Divergence
 
 /-!
 # The divergence theorem on a box, in terms of `divergence`

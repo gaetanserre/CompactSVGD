@@ -5,9 +5,9 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.Calculus.Divergence
 public import Mathlib.Analysis.Calculus.LineDeriv.IntegrationByParts
 public import Mathlib.MeasureTheory.Function.LocallyIntegrable
+public import SBS.Analysis.Calculus.Divergence
 
 /-!
 # The divergence theorem on the whole space

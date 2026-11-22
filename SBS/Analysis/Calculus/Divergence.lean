@@ -5,13 +5,13 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.Normed.Module.Trace
 public import Mathlib.Analysis.Calculus.ContDiff.Comp
 public import Mathlib.Analysis.Calculus.FDeriv.Add
 public import Mathlib.Analysis.Calculus.FDeriv.Equiv
 public import Mathlib.Analysis.Calculus.FDeriv.Measurable
 public import Mathlib.Analysis.Calculus.FDeriv.Mul
 public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import SBS.Analysis.Normed.Module.Trace
 
 /-!
 # Divergence of a vector field
@@ -41,6 +41,7 @@ when `E` is not finite-dimensional, as `LinearMap.trace` is.
   `divergence_sum`: the divergence is linear on differentiable vector fields.
 * `divergence_smul`: the product rule `div (c • f) = c * div f + Dc (f)`.
 * `ContDiff.continuous_divergence`, `measurable_divergence`: regularity of the divergence.
+* `norm_divergence_le_of_lipschitz`: the divergence of a Lipschitz vector field is bounded.
 
 ## Tags
 
@@ -51,7 +52,7 @@ divergence, vector field, trace
 
 open Set Function Filter Module
 
-open scoped Topology
+open scoped NNReal Topology
 
 noncomputable section
 
@@ -251,5 +252,10 @@ theorem measurable_divergence [MeasurableSpace E] [OpensMeasurableSpace E] [Meas
     [BorelSpace 𝕜] (f : E → E) : Measurable (divergence 𝕜 f) :=
   have := FiniteDimensional.completeSpace 𝕜 E
   (ContinuousLinearMap.trace 𝕜 E).continuous.measurable.comp (measurable_fderiv 𝕜 f)
+
+/-- The divergence of a `K`-Lipschitz vector field is bounded by `‖trace‖ * K`. -/
+theorem norm_divergence_le_of_lipschitz {K : ℝ≥0} (hf : LipschitzWith K f) (x : E) :
+    ‖divergence 𝕜 f x‖ ≤ ‖ContinuousLinearMap.trace 𝕜 E‖ * K :=
+  (ContinuousLinearMap.trace 𝕜 E).le_opNorm_of_le (norm_fderiv_le_of_lipschitz 𝕜 hf)
 
 end Regularity

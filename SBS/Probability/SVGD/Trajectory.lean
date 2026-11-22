@@ -5,9 +5,9 @@ Authors: Gaëtan Serré
 -/
 module
 
-public import SBS.Analysis.ODE.Global
-public import SBS.Probability.SVGD.Basic
 public import Mathlib.Analysis.ODE.Gronwall
+public import SBS.Analysis.ODE.FlowHomeomorph
+public import SBS.Probability.SVGD.Basic
 
 /-!
 # Trajectories of the vector field of a curve in `𝓗`
@@ -22,6 +22,9 @@ In SVGD, `m t` is the update direction `φ*_{μₜ}`, and the measures `μₜ` a
 trajectories. The mean-field flow is a fixed point of `m ↦ (t ↦ φ*_{μₜ})`. This file studies the
 trajectories for a fixed curve `m`. The estimates below are the ones needed for the fixed point.
 
+* **Flow maps.** For all times `s` and `t`, the map `x ↦ trajectory Φ m s x t` is a homeomorphism
+  of `ℝᵈ` (`SVGD.isHomeomorph_trajectory`), with inverse `y ↦ trajectory Φ m t y s`
+  (`SVGD.trajectory_trajectory_apply`).
 * **Invariance.** If `Φ` vanishes on the frontier of a closed set `Ω`, every vector field of `𝓗`
   vanishes there, and trajectories starting in `Ω` stay in `Ω` (`SVGD.trajectory_mem`). This is
   the condition that keeps the particles of SVGD in the domain.
@@ -40,6 +43,7 @@ trajectories for a fixed curve `m`. The estimates below are the ones needed for 
   solution with initial condition `x` at time `s`.
 * `SVGD.trajectory_eq`: it is the only one.
 * `SVGD.trajectory_trajectory`: the flow property.
+* `SVGD.isHomeomorph_trajectory`: the flow maps are homeomorphisms.
 * `SVGD.trajectory_mem`: invariance of `Ω`.
 -/
 
@@ -54,9 +58,6 @@ noncomputable section
 namespace SVGD
 
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
-
-/-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
 
 variable {Φ : EuclideanSpace ℝ (Fin d) → H₀} {m m' : ℝ → 𝓗[d, H₀]} {B C K : ℝ≥0}
 
@@ -82,6 +83,13 @@ theorem continuous_toVectorField_apply (hm : Continuous m) (y : EuclideanSpace �
       exact norm_toVectorField_sub_toVectorField_le
   exact this.continuous.comp hm
 
+/-- The derivative `(t, y) ↦ (pairing (m t)).comp (fderiv ℝ Φ y)` of the vector field of `m t` at
+`y` is jointly continuous. -/
+theorem continuous_uncurry_pairing_comp_fderiv (hΦ : ContDiff ℝ 1 Φ) (hm : Continuous m) :
+    Continuous (Function.uncurry fun t y ↦ (pairing (m t)).comp (fderiv ℝ Φ y)) :=
+  (continuous_pairing.comp (hm.comp continuous_fst)).clm_comp
+    ((hΦ.continuous_fderiv one_ne_zero).comp continuous_snd)
+
 /-! ### Trajectories -/
 
 /-- The trajectory through `x` at time `s` of the time-dependent vector field
@@ -100,7 +108,7 @@ include hm hmB hΦK hΦC in
 theorem trajectory_spec (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
     trajectory Φ m s x s = x ∧
       ∀ t, HasDerivAt (trajectory Φ m s x) (toVectorField Φ (m t) (trajectory Φ m s x t)) t :=
-  Classical.epsilon_spec (exists_forall_hasDerivAt_of_lipschitzWith (L := B * C)
+  Classical.epsilon_spec (ODE.exists_forall_hasDerivAt_of_lipschitzWith (L := B * C)
     (fun t ↦ lipschitzWith_toVectorField hΦK (hmB t)) (continuous_toVectorField_apply hm)
     (fun t y ↦ (norm_toVectorField_le_of_le hΦC (hmB t) y).trans_eq (NNReal.coe_mul _ _).symm) s x)
 
@@ -160,19 +168,23 @@ theorem dist_trajectory_trajectory_le {s t : ℝ} (hst : s ≤ t) (x x' : Euclid
     t ⟨hst, le_rfl⟩
   simpa using this
 
-/-- For `t ≥ s`, the time-`t` map of the flow is continuous. -/
-theorem continuous_trajectory_apply {s t : ℝ} (hst : s ≤ t) :
-    Continuous fun x ↦ trajectory Φ m s x t :=
-  (LipschitzWith.of_dist_le_mul (K := ⟨Real.exp (B * K * (t - s)), (Real.exp_pos _).le⟩)
-    fun x x' ↦ (dist_trajectory_trajectory_le hm hmB hΦK hΦC hst x x').trans_eq
-      (mul_comm _ _)).continuous
+/-- **The flow maps are homeomorphisms.** For all times `s` and `t`, the map
+`x ↦ trajectory Φ m s x t` is a homeomorphism of `ℝᵈ`. -/
+theorem isHomeomorph_trajectory (s t : ℝ) : IsHomeomorph (trajectory Φ m s · t) :=
+  ODE.isHomeomorph_flow (continuous_toVectorField_apply hm)
+    (fun t ↦ lipschitzWith_toVectorField hΦK (hmB t)) (hasDerivAt_trajectory hm hmB hΦK hΦC s)
+    (trajectory_self hm hmB hΦK hΦC s) t
+
+/-- The time-`t` map of the flow is continuous. -/
+theorem continuous_trajectory_apply (s t : ℝ) : Continuous fun x ↦ trajectory Φ m s x t :=
+  (isHomeomorph_trajectory hm hmB hΦK hΦC s t).continuous
 
 /-- **Invariance of `Ω`.** If `Φ` vanishes on the frontier of the closed set `Ω`, trajectories
 that meet `Ω` stay in `Ω` at all times. -/
 theorem trajectory_mem {Ω : Set (EuclideanSpace ℝ (Fin d))} (hΩ : IsClosed Ω)
     (hΦΩ : ∀ y ∈ frontier Ω, Φ y = 0)
     {s : ℝ} {x : EuclideanSpace ℝ (Fin d)} (hx : x ∈ Ω) (t : ℝ) : trajectory Φ m s x t ∈ Ω :=
-  mem_of_forall_frontier_eq_zero hΩ (fun t ↦ lipschitzWith_toVectorField hΦK (hmB t))
+  ODE.mem_of_forall_frontier_eq_zero hΩ (fun t ↦ lipschitzWith_toVectorField hΦK (hmB t))
     (fun _ y hy ↦ toVectorField_eq_zero_of_eq_zero (hΦΩ y hy))
     (hasDerivAt_trajectory hm hmB hΦK hΦC s x) (t₀ := s)
     (by rwa [trajectory_self hm hmB hΦK hΦC]) t

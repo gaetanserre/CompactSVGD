@@ -28,7 +28,8 @@ starts from the measure reached at time `n + 1`. This does not require uniquenes
 
 ## Main definitions
 
-* `SVGD.trajectoryHomeomorph`: the map `x ↦ trajectory Φ m s x t`, as a homeomorphism of `Ω`.
+* `SVGD.trajectoryHomeomorph`: the map `x ↦ trajectory Φ m s x t`, as a homeomorphism of a closed
+  set `Ω` invariant under the flow.
 
 ## Main statements
 
@@ -54,9 +55,6 @@ namespace SVGD
 
 variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
 
-/-- The product space `𝓗[d, H₀] = H₀ᵈ` of the update directions of SVGD. -/
-local notation "𝓗[" d ", " H₀ "]" => PiLp 2 fun _ : Fin d ↦ H₀
-
 variable {Φ : EuclideanSpace ℝ (Fin d) → H₀}
   {s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d))}
   {Ω : Set (EuclideanSpace ℝ (Fin d))} {K C B : ℝ≥0} {m : ℝ → 𝓗[d, H₀]}
@@ -66,25 +64,30 @@ variable {Φ : EuclideanSpace ℝ (Fin d) → H₀}
 section Homeomorph
 
 variable (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B) (hΦK : LipschitzWith K Φ)
-  (hΦC : ∀ y, ‖Φ y‖ ≤ C) (hΩ : IsCompact Ω) (hΦΩ : ∀ y ∈ frontier Ω, Φ y = 0)
+  (hΦC : ∀ y, ‖Φ y‖ ≤ C) (hΩ : IsClosed Ω) (hΦΩ : ∀ y ∈ frontier Ω, Φ y = 0)
 
-/-- For `s ≤ t`, the map `x ↦ trajectory Φ m s x t`, as a homeomorphism of the compact set `Ω`.
-Its inverse is `y ↦ trajectory Φ m t y s`. -/
-def trajectoryHomeomorph {s t : ℝ} (hst : s ≤ t) : Ω ≃ₜ Ω :=
-  have := isCompact_iff_compactSpace.1 hΩ
-  Continuous.homeoOfEquivCompactToT2 (f :=
-    { toFun := fun x ↦ ⟨trajectory Φ m s x t,
-        trajectory_mem hm hmB hΦK hΦC hΩ.isClosed hΦΩ x.property t⟩
-      invFun := fun y ↦ ⟨trajectory Φ m t y s,
-        trajectory_mem hm hmB hΦK hΦC hΩ.isClosed hΦΩ y.property s⟩
-      left_inv := fun x ↦ Subtype.ext (trajectory_trajectory_apply hm hmB hΦK hΦC s t x)
-      right_inv := fun y ↦ Subtype.ext (trajectory_trajectory_apply hm hmB hΦK hΦC t s y) })
-    (((continuous_trajectory_apply hm hmB hΦK hΦC hst).comp continuous_subtypeVal).subtype_mk _)
+/-- The map `x ↦ trajectory Φ m s x t`, as a homeomorphism of the closed set `Ω`. Its inverse is
+`y ↦ trajectory Φ m t y s`. -/
+def trajectoryHomeomorph (s t : ℝ) : Ω ≃ₜ Ω where
+  toFun x := ⟨trajectory Φ m s x t, trajectory_mem hm hmB hΦK hΦC hΩ hΦΩ x.property t⟩
+  invFun y := ⟨trajectory Φ m t y s, trajectory_mem hm hmB hΦK hΦC hΩ hΦΩ y.property s⟩
+  left_inv x := Subtype.ext (trajectory_trajectory_apply hm hmB hΦK hΦC s t x)
+  right_inv y := Subtype.ext (trajectory_trajectory_apply hm hmB hΦK hΦC t s y)
+  continuous_toFun :=
+    ((continuous_trajectory_apply hm hmB hΦK hΦC s t).comp continuous_subtypeVal).subtype_mk _
+  continuous_invFun :=
+    ((continuous_trajectory_apply hm hmB hΦK hΦC t s).comp continuous_subtypeVal).subtype_mk _
 
 @[simp]
-theorem coe_trajectoryHomeomorph_apply {s t : ℝ} (hst : s ≤ t) (x : Ω) :
-    (trajectoryHomeomorph hm hmB hΦK hΦC hΩ hΦΩ hst x : EuclideanSpace ℝ (Fin d)) =
+theorem coe_trajectoryHomeomorph_apply (s t : ℝ) (x : Ω) :
+    (trajectoryHomeomorph hm hmB hΦK hΦC hΩ hΦΩ s t x : EuclideanSpace ℝ (Fin d)) =
       trajectory Φ m s x t :=
+  rfl
+
+@[simp]
+theorem coe_trajectoryHomeomorph_symm_apply (s t : ℝ) (y : Ω) :
+    ((trajectoryHomeomorph hm hmB hΦK hΦC hΩ hΦΩ s t).symm y : EuclideanSpace ℝ (Fin d)) =
+      trajectory Φ m t y s :=
   rfl
 
 end Homeomorph
@@ -128,7 +131,7 @@ theorem exists_meanField (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCompact
       have hB' : ∀ t, ‖step n (ν n) t‖ ≤ B := fun t ↦ hB _ (hK t)
       rw [hνsucc]
       refine ⟨by infer_instance, ae_mem_map hΩ ih.2
-        (continuous_trajectory_apply hc hB' hΦ.lipschitzWith hΦ.norm_le (by linarith))
+        (continuous_trajectory_apply hc hB' hΦ.lipschitzWith hΦ.norm_le n (n + 1))
         fun x hx ↦ trajectory_mem hc hB' hΦ.lipschitzWith hΦ.norm_le hΩ.isClosed
           hΦ.eq_zero_of_mem_frontier hx _⟩
   have hm (n : ℕ) := hstep n (ν n) (hP n).1 (hP n).2
@@ -190,10 +193,10 @@ theorem exists_meanField (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCompact
         rw [Nat.cast_succ]
         exact hT n x ⟨by linarith, le_rfl⟩
       rw [hcomp, ← Measure.map_map
-        (continuous_trajectory_apply (hm n).1 (hmB n) hΦ.lipschitzWith hΦ.norm_le
-          (by linarith)).measurable
-        (continuous_trajectory_apply hMc hMB hΦ.lipschitzWith hΦ.norm_le
-          (Nat.cast_nonneg n)).measurable, ih, hνsucc]
+        (continuous_trajectory_apply (hm n).1 (hmB n) hΦ.lipschitzWith hΦ.norm_le n
+          (n + 1)).measurable
+        (continuous_trajectory_apply hMc hMB hΦ.lipschitzWith hΦ.norm_le 0 n).measurable, ih,
+        hνsucc]
   refine ⟨M, hMc, hMK, fun t ht ↦ ?_⟩
   set n := ⌊t⌋₊
   have htn : t ∈ Icc (n : ℝ) (n + 1) := ⟨Nat.floor_le ht, (Nat.lt_floor_add_one t).le⟩
@@ -202,9 +205,8 @@ theorem exists_meanField (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCompact
   rw [hM n htn]
   change step n (ν n) t = _
   rw [(hm n).2.2 t htn, hcomp, ← Measure.map_map
-    (continuous_trajectory_apply (hm n).1 (hmB n) hΦ.lipschitzWith hΦ.norm_le htn.1).measurable
-    (continuous_trajectory_apply hMc hMB hΦ.lipschitzWith hΦ.norm_le
-      (Nat.cast_nonneg n)).measurable, hTν]
+    (continuous_trajectory_apply (hm n).1 (hmB n) hΦ.lipschitzWith hΦ.norm_le n t).measurable
+    (continuous_trajectory_apply hMc hMB hΦ.lipschitzWith hΦ.norm_le 0 n).measurable, hTν]
 
 /-- **Existence of the mean-field SVGD flow.** Let `Ω ⊆ ℝᵈ` be compact, let the score `s` of the
 target be continuous on `Ω`, and let `Φ` be an admissible feature map. For every probability
@@ -222,8 +224,8 @@ theorem exists_flow (hΦ : AdmissibleFeatureMap Φ Ω K C) (hΩ : IsCompact Ω)
   have hmB (t : ℝ) : ‖m t‖ ≤ B := hB _ (hmK t)
   refine ⟨fun t x ↦ trajectory Φ m 0 x t,
     fun x ↦ trajectory_self hmc hmB hΦ.lipschitzWith hΦ.norm_le 0 x,
-    fun t ht ↦ ⟨trajectoryHomeomorph hmc hmB hΦ.lipschitzWith hΦ.norm_le hΩ
-      hΦ.eq_zero_of_mem_frontier ht, fun _ ↦ rfl⟩, fun x t ht ↦ ?_⟩
+    fun t _ ↦ ⟨trajectoryHomeomorph hmc hmB hΦ.lipschitzWith hΦ.norm_le hΩ.isClosed
+      hΦ.eq_zero_of_mem_frontier 0 t, fun _ ↦ rfl⟩, fun x t ht ↦ ?_⟩
   rw [← hm t ht]
   exact hasDerivAt_trajectory hmc hmB hΦ.lipschitzWith hΦ.norm_le 0 x t
 

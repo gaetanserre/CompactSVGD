@@ -5,9 +5,9 @@ Authors: Gaëtan Serré
 -/
 module
 
+public import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 public import SBS.Probability.Stein.Class
 public import SBS.Probability.Stein.Operator
-public import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 
 /-!
 # Stein's identity

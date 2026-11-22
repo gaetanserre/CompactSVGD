@@ -5,6 +5,7 @@ Authors: Gaëtan Serré
 -/
 module
 
+public import Mathlib.Analysis.Calculus.FDeriv.Add
 public import Mathlib.Analysis.Calculus.InverseFunctionTheorem.ApproximatesLinearOn
 
 /-!
@@ -28,6 +29,7 @@ Kullback–Leibler divergence is computed in Stein Variational Gradient Descent.
 
 ## Main statements
 
+* `hasFDerivAt_add_smul`: the derivative of `x ↦ x + ε • v x` is `id + ε • Dv`.
 * `LipschitzWith.add_smul_mem`: if `v` vanishes on the frontier of the closed set `s`, then
   `x + ε • v x ∈ s` for `x ∈ s`.
 * `LipschitzWith.addSMulHomeomorph_image`: the homeomorphism maps `s` onto `s`.
@@ -40,6 +42,11 @@ open Set Metric
 open scoped NNReal
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {v : E → E} {K : ℝ≥0} {ε : ℝ}
+
+/-- The derivative of the perturbation `y ↦ y + ε • v y` of the identity is `id + ε • Dv`. -/
+theorem hasFDerivAt_add_smul {x : E} (hv : DifferentiableAt ℝ v x) :
+    HasFDerivAt (fun y ↦ y + ε • v y) (ContinuousLinearMap.id ℝ E + ε • fderiv ℝ v x) x :=
+  (hasFDerivAt_id x).add (hv.hasFDerivAt.const_smul ε)
 
 namespace LipschitzWith
 

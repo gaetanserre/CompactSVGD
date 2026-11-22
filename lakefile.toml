@@ -2,6 +2,7 @@ name = "SBS"
 version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["SBS"]
+lintDriver = "batteries/runLinter"
 
 [leanOptions]
 pp.unicode.fun = true
