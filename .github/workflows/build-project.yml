@@ -1,0 +1,53 @@
+name: Build Project
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:        # Allow manual triggering of the workflow from the GitHub Actions interface
+
+# Cancel previous runs if a new commit is pushed to the same PR or branch
+concurrency:
+  group: ${{ github.ref }}  # Group runs by the ref (branch or PR)
+  cancel-in-progress: true  # Cancel any ongoing runs in the same group
+
+jobs:
+  build_project:
+    runs-on: ubuntu-latest
+    name: Build Project
+    steps:
+      - name: Cleanup to free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: false
+          haskell: false
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
+      - name: Checkout project
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Build, test and lint project
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # 2026-01-15
+        with:
+          build: true
+          test: true
+          lint: true
+          mk_all-check: false
+
+      - name: Check that the comparator challenge is up to date
+        run: |
+          python3 scripts/make_challenge.py
+          git diff --exit-code CompactSVGDChallenge comparator.json

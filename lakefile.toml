@@ -1,27 +1,25 @@
-name = "SBS"
+name = "CompactSVGD"
 version = "0.1.0"
 keywords = ["math"]
-defaultTargets = ["SBS"]
+defaultTargets = ["CompactSVGD"]
+testDriver = "CompactSVGDTests"
 lintDriver = "batteries/runLinter"
 
 [leanOptions]
-pp.unicode.fun = true
+pp.unicode.fun = true                 # pretty-prints `fun a ↦ b`
 autoImplicit = false
 relaxedAutoImplicit = false
-weak.linter.mathlibStandardSet = true
-maxSynthPendingDepth = 3
+weak.linter.mathlibStandardSet = true # enables all the style linters of mathlib
+maxSynthPendingDepth = 3              # same as mathlib
 
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-# The commit pinned by Tau Ceti `b608709`.
-rev = "31ce06eaadf4a200c0e1407c5f10953cf606b8f8"
-
-[[require]]
-name = "TauCeti"
-git = "https://github.com/TauCetiProject/TauCeti"
-# Bump together with the Mathlib commit above, to the Mathlib commit of Tau Ceti's manifest.
-rev = "b608709b45f23ccda55703d572b0adb1fdec30fd"
+rev = "master"
 
 [[lean_lib]]
-name = "SBS"
+name = "CompactSVGD"
+
+[[lean_lib]]
+name = "CompactSVGDTests"
+globs = ["CompactSVGDTests.*"]
