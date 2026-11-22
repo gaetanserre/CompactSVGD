@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 1
 
       - name: Build, test and lint project
-        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # 2026-01-15
+        uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # 2026-01-15
         with:
           build: true
           test: true
