@@ -1,10 +1,11 @@
-# SBS — a Mathlib-style formalization of Stein Boltzmann Sampling on a compact domain
+# SBS — a formalization of Stein Variational Gradient Descent on a compact domain
 
-Lean 4 formalization of the theory of *Stein Boltzmann Sampling* (Serré, Kalogeratos, Vayatis,
-AISTATS 2025), i.e. the mean-field analysis of SVGD on a compact set `Ω ⊆ ℝᵈ`. The numbering is the
-one of `main_v2.tex`. The code is written as if it were to be merged into Mathlib: general
-statements, Mathlib namespaces and naming conventions, one file per object, module docstrings,
-no `sorry`, and both Mathlib linters (`lake exe runLinter SBS`, `lake exe lint-style SBS`) pass.
+Lean 4 formalization of the mean-field theory of Stein Variational Gradient Descent (SVGD) on a
+compact set `Ω ⊆ ℝᵈ`, following the theoretical part of *Stein Boltzmann Sampling* (Serré,
+Kalogeratos, Vayatis, AISTATS 2025). The numbering is the one of `main_v2.tex`. The code is
+written as if it were to be merged into Mathlib: general statements, Mathlib namespaces and
+naming conventions, one file per object, module docstrings, no `sorry`, and both Mathlib linters
+(`lake exe runLinter SBS`, `lake exe lint-style SBS`) pass.
 
 ```
 lake exe cache get
@@ -13,10 +14,12 @@ lake build
 
 The project depends on Mathlib and on [Tau Ceti](https://github.com/TauCetiProject/TauCeti)
 (Lean `v4.37.0-rc1`). Mathlib is pinned to the commit of Tau Ceti's manifest; bump both together.
-Tau Ceti is used in two places: the divergence theorem on balls
-(`TauCeti.setIntegral_ball_trace_fderiv`, in `DivergenceTheorem/Ball.lean`) and Schauder's
+Tau Ceti is used in three places: the divergence theorem on balls
+(`TauCeti.setIntegral_ball_trace_fderiv`, in `DivergenceTheorem/Ball.lean`), Schauder's
 fixed-point theorem (`TauCeti.schauderFixedPoint_closedConvex_continuousOn`, in
-`SVGD/MeanField.lean`). `lake build` compiles the Tau Ceti modules it needs from source, in about a
+`SVGD/MeanField.lean`), and the smoothness of the determinant with Jacobi's formula
+(`ContinuousLinearMap.contDiff_det`, `Matrix.hasDerivAt_det_one_add_smul`, in
+`FDeriv/DetIdAddSMul.lean`). `lake build` compiles the Tau Ceti modules it needs from source, in about a
 minute. Every other file depends on Mathlib only.
 
 ## Contents
@@ -41,6 +44,12 @@ minute. Every other file depends on Mathlib only.
 | `SBS/Probability/SVGD/Trajectory.lean` | trajectories of the vector field of a curve `m : ℝ → 𝓗`: existence, uniqueness, flow property, invariance of `Ω`, Grönwall estimates |
 | `SBS/Probability/SVGD/MeanField.lean` | `AdmissibleFeatureMap`; McKean–Vlasov equation on `[a, b]` by Schauder's theorem |
 | `SBS/Probability/SVGD/Flow.lean` | **the mean-field SVGD flow on `[0, ∞)`** (`SVGD.exists_flow`) |
+| `SBS/Analysis/InnerProductSpace/UnitBall.lean` | `v / ‖v‖` is the unique maximizer of `⟪·, v⟫` on the unit ball; `⨆_{‖h‖ ≤ 1} ⟪h, v⟫² = ‖v‖²` |
+| `SBS/Probability/SVGD/SteinDiscrepancy.lean` | **Theorem A.7**: `E_ν[𝒜_s h] = ⟪h, φ*_ν⟫`, `𝔎(ν) = ‖φ*_ν‖²`, `φ*_ν / ‖φ*_ν‖` is the unique steepest direction |
+| `SBS/Analysis/Normed/PerturbationOfIdentity.lean` | `x ↦ x + ε • v x` is a homeomorphism for `|ε| Lip(v) < 1`, mapping `Ω` onto `Ω` when `v = 0` on `frontier Ω` |
+| `SBS/Analysis/Calculus/FDeriv/DetIdAddSMul.lean` | Jacobi's formula: `t ↦ det (id + t • A)` has derivative `trace A` at `0` (Tau Ceti) |
+| `SBS/InformationTheory/KullbackLeibler/Reweighting.lean` | `KL(e#μ ‖ e#ν) = KL(μ ‖ ν)` for measurable equivalences; KL against a reweighted reference measure |
+| `SBS/Probability/Stein/FirstVariation.lean` | core of **Theorem A.8**: `∂ε KL((I + ε v)#μ ‖ π)|_{ε=0} = -E_μ[𝒜_s v]` |
 
 ## Lemma A.3 (Stein's identity)
 
