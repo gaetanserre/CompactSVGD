@@ -12,6 +12,8 @@ module: CompactSVGD.Paper
 trusted:
   - CompactSVGD.Definitions
 docgen: https://gaetanserre.fr/CompactSVGD/docs/
+# The docgen of the project also documents Lean, Mathlib and the other dependencies, at their versions.
+docgen_external: https://gaetanserre.fr/CompactSVGD/docs/
 # The source links point to `<repository>/blob/<commit>/<file>#L<line>`. Without this line, the
 # repository is the `origin` remote of git; the commit is the current one (`git rev-parse HEAD`).
 repository: https://github.com/gaetanserre/CompactSVGD
