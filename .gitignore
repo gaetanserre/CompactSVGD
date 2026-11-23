@@ -1,1 +1,4 @@
 /.lake
+# written by the CI (docgen-action and the website)
+/docbuild
+/_site

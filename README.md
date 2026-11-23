@@ -71,7 +71,7 @@ do not assume its existence. Their primed versions (such as `SVGD.weak_convergen
 solution `m` of the mean-field equation.
 
 The last section of `CompactSVGD/Paper.lean` shows that the hypotheses of Theorem 3.1 can be met.
-In dimension `1`, on `Ω = [-1, 1]`, the kernel `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)` is admissible
+In dimension `1`, on `Ω = [-1, 1]`, the kernel `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)` is admissible
 and Stein-universal for every score continuous on `Ω`. Here `Rₙ` is the primitive of `tⁿ - mₙ`
 that vanishes at `±1`, `χ` is a smooth cutoff equal to `1` on `[-2, 2]`, and `wₙ > 0`. The proof of
 Stein-universality solves the Stein equation `σ u + u' = φ - c` with `u(±1) = 0`, then approximates

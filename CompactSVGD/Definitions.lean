@@ -55,8 +55,7 @@ variable (𝕜 : Type*) [NontriviallyNormedField 𝕜] {E : Type*} [NormedAddCom
 /-- The divergence of a vector field `f : E → E` at `x`, i.e. the trace of `fderiv 𝕜 f x`.
 
 It is `0` when `f` is not differentiable at `x`, and when `E` is not finite-dimensional. -/
-def divergence (f : E → E) (x : E) : 𝕜 :=
-  LinearMap.trace 𝕜 E (fderiv 𝕜 f x)
+def divergence (f : E → E) (x : E) : 𝕜 := LinearMap.trace 𝕜 E (fderiv 𝕜 f x)
 
 end Divergence
 

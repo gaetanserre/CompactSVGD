@@ -60,7 +60,7 @@ and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
 
 * **Appendix A.2.1, the standing assumptions.** `SVGD.StandingAssumptions Ω π p s Φ K C` fixes the
   space (`Ω` compact), the target (`π = p · λ|_Ω`, with a continuous score `s = ∇ log p`) and the
-  kernel (`k(x, y) = ⟪Φ x, Φ y⟫` with an admissible feature map `Φ`). Every result takes this single
+  kernel (`k(x, y) = ⟪Φ x, Φ y⟫` with an admissible feature map `Φ`). Most results take this single
   hypothesis `hS`, plus the additional hypotheses of each result, written explicitly.
 * **Appendix A.2.2, Stein's method.** The Stein operator, the Stein class (Definition A.2) and
   Stein's identity (Lemma A.3).
@@ -1187,13 +1187,13 @@ end SVGD
 This section is not in [Serre2025]. It builds a kernel that satisfies all the hypotheses of
 Theorem 3.1 in dimension `1`, on `Ω = [-1, 1]` (`closedBall 0 1`), for every admissible target.
 
-The kernel is `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)`, with the feature map
+The kernel is `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)`, with the feature map
 `SVGD.intervalFeatureMap : y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of `SVGD.seqFeatureMap`. The polynomial
 `Rₙ` (`SVGD.intervalPoly n`) is the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. Thus it is
 a multiple of `w(t) = 1 - t²`, and `k` is a weighted kernel `w(x) w(y) k₀(x, y)` on `Ω`. The cutoff
 `χ` (`SVGD.intervalCutoff`) equals `1` on `[-2, 2]`. It makes the feature map bounded and Lipschitz
-on `ℝ`, and the weights `wₙ > 0` make it `C¹`. As the `Rₙ` vanish at `±1`, so does the feature
-map (`SVGD.admissibleFeatureMap_intervalFeatureMap`).
+on `ℝ`. The weights `wₙ` make it `C¹`, as `wₙ (|gₙ| + |gₙ'|) ≤ 2⁻ⁿ` for `gₙ = χ Rₙ`. As the `Rₙ`
+vanish at `±1`, so does the feature map (`SVGD.admissibleFeatureMap_intervalFeatureMap`).
 
 Stein-universality (`SVGD.isSteinUniversal_intervalFeatureMap`) only needs a score `σ` continuous
 on `Ω`. Let `φ` be continuous on `Ω`. The one-dimensional Stein equation `σ u + u' = φ - c` has a
@@ -1224,7 +1224,7 @@ def intervalPoly (n : ℕ) (t : ℝ) : ℝ :=
   (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1) - (1 - (-1) ^ (n + 1)) / (2 * (n + 1)) * (t + 1)
 
 /-- **A Stein-universal kernel on `[-1, 1]`.** The feature map `y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of
-the kernel `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)` on `ℝ`, where `χ = SVGD.intervalCutoff`,
+the kernel `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)` on `ℝ`, where `χ = SVGD.intervalCutoff`,
 `Rₙ = SVGD.intervalPoly n` and the weights `wₙ > 0` are those of `SVGD.seqFeatureMap`. -/
 def intervalFeatureMap (y : EuclideanSpace ℝ (Fin 1)) : ℓ²(ℕ, ℝ) :=
   seqFeatureMap (fun n t ↦ intervalCutoff t * intervalPoly n t) (y 0)

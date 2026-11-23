@@ -1,0 +1,6 @@
+/.lake
+/_site
+# resolved again by the CI, from the manifest of the project
+/lake-manifest.json
+# written by `lake exe showcase --comparator`
+/comparator-report.json

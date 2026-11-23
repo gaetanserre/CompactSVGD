@@ -1,0 +1,14 @@
+# Builds the website of the formalization with `lake exe showcase` (see `showcase.md`).
+# A separate workspace, so that the project itself does not depend on `showcase`.
+name = "site"
+reservoir = false
+packagesDir = "../.lake/packages"
+
+[[require]]
+name = "CompactSVGD"
+path = "../"
+
+[[require]]
+name = "showcase"
+git = "https://github.com/gaetanserre/LeanShowcase"
+rev = "main"
