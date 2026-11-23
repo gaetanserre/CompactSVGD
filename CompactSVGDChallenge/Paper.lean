@@ -6,6 +6,8 @@ Authors: Gaëtan Serré
 module
 
 public import CompactSVGD.Definitions
+public import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
+public import Mathlib.Analysis.InnerProductSpace.l2Space
 public import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
@@ -18,7 +20,8 @@ This file formalizes the theory of SVGD developed in the appendix of the revised
 definition and result of the paper appears here, in the paper's order, with its proof. The only
 additions are the construction of the mean-field SVGD flow, which the AISTATS 2025 version
 [Serre2025] assumes, the primed versions of the results along the flow, stated for every solution
-of the mean-field equation, and private technical lemmas. The numbering is that of [Serre2025].
+of the mean-field equation, a Stein-universal kernel on `[-1, 1]` in the last section, and private
+technical lemmas. The numbering is that of [Serre2025].
 
 The general mathematics (divergence, global solutions of ODEs, Barbalat's lemma, Kullback–Leibler
 divergence along a flow, ...) lives in `CompactSVGD/ForMathlib/`, and the vector fields of the
@@ -43,6 +46,8 @@ and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
   Kullback–Leibler divergence along it (Theorem A.11).
 * **Appendix B, proofs.** Proposition 3.2, then Lemma B.4, Corollary B.5, Lemma B.6 and
   Theorem 3.1, in the order of the proof of Theorem 3.1.
+* **A Stein-universal kernel on `[-1, 1]`** (not in [Serre2025]). An explicit kernel that satisfies
+  all the hypotheses of Theorem 3.1 in dimension `1`, for every admissible target.
 
 ## Main statements
 
@@ -54,6 +59,9 @@ and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
 * `SVGD.time_derivative_kl`: Theorem A.11.
 * `SVGD.ksd_valid_discrepancy`: Proposition 3.2.
 * `SVGD.weak_convergence`: **Theorem 3.1**.
+* `SVGD.admissibleFeatureMap_intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`: the
+  kernel of `SVGD.intervalFeatureMap` satisfies the hypotheses of Theorem 3.1 on `[-1, 1]`.
+* `SVGD.weak_convergence_intervalFeatureMap`: Theorem 3.1 on `[-1, 1]` with this kernel.
 
 ## Notation
 
@@ -723,5 +731,137 @@ theorem weak_convergence (hU : IsSteinUniversal Φ s Ω) (g : EuclideanSpace ℝ
   sorry
 
 end WeakConvergence
+
+end SVGD
+
+/-! ## A Stein-universal kernel on `[-1, 1]`
+
+This section is not in [Serre2025]. It builds a kernel that satisfies all the hypotheses of
+Theorem 3.1 in dimension `1`, on `Ω = [-1, 1]` (`closedBall 0 1`), for every admissible target.
+
+The kernel is `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)`, with the feature map
+`SVGD.intervalFeatureMap : y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of `SVGD.seqFeatureMap`. The polynomial
+`Rₙ` (`SVGD.intervalPoly n`) is the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. Thus it is
+a multiple of `w(t) = 1 - t²`, and `k` is a weighted kernel `w(x) w(y) k₀(x, y)` on `Ω`. The cutoff
+`χ` (`SVGD.intervalCutoff`) equals `1` on `[-2, 2]`. It makes the feature map bounded and Lipschitz
+on `ℝ`, and the weights `wₙ > 0` make it `C¹`. As the `Rₙ` vanish at `±1`, so does the feature
+map (`SVGD.admissibleFeatureMap_intervalFeatureMap`).
+
+Stein-universality (`SVGD.isSteinUniversal_intervalFeatureMap`) only needs a score `σ` continuous
+on `Ω`. Let `φ` be continuous on `Ω`. The one-dimensional Stein equation `σ u + u' = φ - c` has a
+solution with `u(-1) = u(1) = 0` (`exists_hasDerivAt_sub_sub_mul`). By the Weierstrass
+theorem, `u'` is uniformly close to a polynomial `q = ∑ₙ qₙ tⁿ` on `Ω`. Then `R = ∑ₙ qₙ Rₙ` is
+close to `u` in `C¹(Ω)`, and `𝒜_π R + c = σ R + R' + c` is uniformly close to `φ` on `Ω`.
+
+In dimension `d ≥ 2`, a kernel of this form cannot vanish on the frontier of a box and be
+Stein-universal: at a corner, `ξ_y = 0`. Weighted kernels on domains with a `C²` frontier are not
+formalized. -/
+
+namespace SVGD
+
+open scoped lp
+
+/-- The cutoff `χ` of `SVGD.intervalFeatureMap`: a smooth function on `ℝ`, equal to `1` on
+`[-2, 2]` and supported in `(-3, 3)`. -/
+@[simps]
+def intervalCutoff : ContDiffBump (0 : ℝ) where
+  rIn := 2
+  rOut := 3
+  rIn_pos := two_pos
+  rIn_lt_rOut := by norm_num
+
+/-- The polynomial `Rₙ(t) = (tⁿ⁺¹ - (-1)ⁿ⁺¹) / (n + 1) - mₙ (t + 1)`, with
+`mₙ = (1 - (-1)ⁿ⁺¹) / (2 (n + 1))`: the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. -/
+def intervalPoly (n : ℕ) (t : ℝ) : ℝ :=
+  (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1) - (1 - (-1) ^ (n + 1)) / (2 * (n + 1)) * (t + 1)
+
+/-- **A Stein-universal kernel on `[-1, 1]`.** The feature map `y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of
+the kernel `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)` on `ℝ`, where `χ = SVGD.intervalCutoff`,
+`Rₙ = SVGD.intervalPoly n` and the weights `wₙ > 0` are those of `SVGD.seqFeatureMap`. -/
+def intervalFeatureMap (y : EuclideanSpace ℝ (Fin 1)) : ℓ²(ℕ, ℝ) :=
+  seqFeatureMap (fun n t ↦ intervalCutoff t * intervalPoly n t) (y 0)
+
+/-- The feature map of a sequence of functions (`CompactSVGD/Definitions.lean`). -/
+example (g : ℕ → ℝ → ℝ) (x : ℝ) :
+    seqFeatureMap g x = ∑' n, (seqWeight g n * g n x) • lp.single 2 n 1 :=
+  rfl
+
+/-- The weights of `SVGD.seqFeatureMap` (`CompactSVGD/Definitions.lean`). -/
+example (g : ℕ → ℝ → ℝ) (n : ℕ) :
+    seqWeight g n = (2⁻¹ : ℝ) ^ n / (1 + ⨆ x, (‖g n x‖ + ‖fderiv ℝ (g n) x‖)) :=
+  rfl
+
+private theorem intervalCutoff_eq_one {t : ℝ} (ht : |t| ≤ 2) : intervalCutoff t = 1 :=
+  sorry
+
+private theorem intervalPoly_neg_one (n : ℕ) : intervalPoly n (-1) = 0 :=
+  sorry
+
+private theorem intervalPoly_one (n : ℕ) : intervalPoly n 1 = 0 :=
+  sorry
+
+private theorem hasDerivAt_intervalPoly (n : ℕ) (t : ℝ) :
+    HasDerivAt (intervalPoly n) (t ^ n - (1 - (-1) ^ (n + 1)) / (2 * (n + 1))) t :=
+  sorry
+
+private theorem contDiff_intervalCutoff_mul (n : ℕ) :
+    ContDiff ℝ 1 fun t ↦ intervalCutoff t * intervalPoly n t :=
+  sorry
+
+private theorem bddAbove_intervalCutoff_mul (n : ℕ) :
+    BddAbove (range fun t ↦ ‖intervalCutoff t * intervalPoly n t‖ +
+      ‖fderiv ℝ (fun t ↦ intervalCutoff t * intervalPoly n t) t‖) :=
+  sorry
+
+/-- **The kernel of `SVGD.intervalFeatureMap` is admissible** on `Ω = [-1, 1]`: its feature map is
+`C¹`, `2`-Lipschitz, bounded by `2`, and vanishes at `±1`. -/
+theorem admissibleFeatureMap_intervalFeatureMap :
+    AdmissibleFeatureMap intervalFeatureMap (closedBall 0 1) 2 2 :=
+  sorry
+
+/-- In dimension `1`, if `⟪h, Φ y⟫ = G(y₀)` for every `y`, then the Stein operator of the vector
+field of `h` is `𝒜 h (x) = s x (e₀) G(x₀) + G'(x₀)`. -/
+private theorem steinOperator_eq_of_inner_eq {H₀ : Type*} [NormedAddCommGroup H₀]
+    [InnerProductSpace ℝ H₀] {Φ : EuclideanSpace ℝ (Fin 1) → H₀}
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))} {h : H₀} {G : ℝ → ℝ}
+    (hG : Differentiable ℝ G) (hΦ : ∀ y, ⟪h, Φ y⟫ = G (y 0)) (x : EuclideanSpace ℝ (Fin 1)) :
+    steinOperator s (toVectorField Φ (WithLp.toLp 2 fun _ ↦ h : 𝓗[1, H₀])) x =
+      s x (EuclideanSpace.single 0 1) * G (x 0) + deriv G (x 0) :=
+  sorry
+
+/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|m| ≤ δ`. -/
+private theorem abs_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
+    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
+    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) : |m| ≤ δ :=
+  sorry
+
+/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|f| ≤ 4 δ` on
+`[-1, 1]`. -/
+private theorem abs_apply_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
+    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
+    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) :
+    |f t| ≤ 4 * δ :=
+  sorry
+
+/-- **The kernel of `SVGD.intervalFeatureMap` is Stein-universal** on `Ω = [-1, 1]`, for every
+score `s` continuous on `Ω`. -/
+theorem isSteinUniversal_intervalFeatureMap
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
+    (hs : ContinuousOn s (closedBall 0 1)) :
+    IsSteinUniversal intervalFeatureMap s (closedBall 0 1) :=
+  sorry
+
+/-- **Weak convergence of SVGD on `[-1, 1]`** (Theorem 3.1 of [Serre2025] in dimension `1`, with an
+explicit kernel). Let `π` be an admissible target on `Ω = [-1, 1]` and let `μ ∈ 𝒫(Ω)` with
+`KL(μ ‖ π) < ∞`. Along the mean-field SVGD flow of the kernel of `SVGD.intervalFeatureMap`,
+`μ_t ⇀ π`: for every `g` continuous on `Ω`, `E_{μ_t}[g] → E_π[g]` as `t → ∞`. -/
+theorem weak_convergence_intervalFeatureMap {π μ : Measure (EuclideanSpace ℝ (Fin 1))}
+    {p : EuclideanSpace ℝ (Fin 1) → ℝ}
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
+    (hπ : AdmissibleTarget (closedBall 0 1) π p s) [IsProbabilityMeasure μ] (hKL : klDiv μ π ≠ ∞)
+    (g : EuclideanSpace ℝ (Fin 1) → ℝ) (hg : ContinuousOn g (closedBall 0 1)) :
+    Tendsto (fun t ↦ ∫ x, g x ∂μ.map (meanFieldFlow intervalFeatureMap s μ t)) atTop
+      (𝓝 (∫ x, g x ∂π)) :=
+  sorry
 
 end SVGD

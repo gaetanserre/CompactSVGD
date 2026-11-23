@@ -8,8 +8,11 @@ challenge `CompactSVGDChallenge/Paper.lean`, one per theorem, by design.
 ## Mathematics
 
 - [ ] Uniqueness of the mean-field SVGD flow, which needs a Lipschitz score.
-- [ ] Sufficient conditions for a kernel to be Stein-universal (Definition A.9), for instance with
-  the Stone–Weierstrass theorem now that `SVGD.IsSteinUniversal` is a density in `C(Ω, ℝ)`.
+- [x] A kernel with all the hypotheses of Theorem 3.1 in dimension `1`, on `[-1, 1]`
+  (`SVGD.intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`).
+- [ ] Stein-universal kernels in dimension `d ≥ 2`: the weighted kernels `w(x) w(y) k₀(x, y)` on
+  domains with a `C²` frontier of the notes on Theorem 3.1 (Hahn–Banach, Riesz–Markov, divergence
+  theorem), or one weight per component on boxes, which needs a matrix-valued kernel.
 
 ## Upstreaming
 
@@ -21,7 +24,7 @@ challenge `CompactSVGDChallenge/Paper.lean`, one per theorem, by design.
     `ContinuousLinearMap.contDiff_det` and Jacobi's formula at the identity, Liouville's formula,
     `LipschitzWith.exists_homeomorph_id_add` and the invariance of a set under it, the maximizer of
     `⟪·, v⟫` on the unit ball, `IsCompact.closedConvexHull`, the derivative of `log ∘ p` along a
-    curve;
+    curve, the two-point problem `exists_hasDerivAt_sub_sub_mul`;
   - linear algebra and topology: `ContinuousLinearMap.traceCLM`,
     `IsPreconnected.inter_frontier_nonempty`, `continuous_of_eqOn_Icc_nat`;
   - measure theory and information theory: `measurable_det_fderiv`,

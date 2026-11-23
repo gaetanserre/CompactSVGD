@@ -39,7 +39,10 @@
     "SVGD.cluster_points'",
     "SVGD.cluster_points",
     "SVGD.weak_convergence'",
-    "SVGD.weak_convergence"
+    "SVGD.weak_convergence",
+    "SVGD.admissibleFeatureMap_intervalFeatureMap",
+    "SVGD.isSteinUniversal_intervalFeatureMap",
+    "SVGD.weak_convergence_intervalFeatureMap"
   ],
   "permitted_axioms": [
     "propext",

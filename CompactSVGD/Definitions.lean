@@ -6,6 +6,7 @@ Authors: Gaëtan Serré
 module
 
 public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.Normed.Lp.lpSpace
 public import Mathlib.Analysis.ODE.Basic
 public import Mathlib.LinearAlgebra.Trace
 
@@ -17,9 +18,10 @@ can be checked by hand in one place: all the other files only contain lemmas. To
 of `CompactSVGD/Paper.lean`, one only needs to trust Mathlib, this file, and the definitions and
 statements of `CompactSVGD/Paper.lean`.
 
-The first definitions are general; their API is in `CompactSVGD/ForMathlib/`. The last ones are the
+The first definitions are general; their API is in `CompactSVGD/ForMathlib/`. The next ones are the
 vector fields of a feature map `Φ : ℝᵈ → H₀`, for the kernel `k(x, y) = ⟪Φ x, Φ y⟫` of SVGD, and
-their trajectories; their lemmas are in `CompactSVGD/FeatureMap/`.
+their trajectories. The last ones build a feature map into `ℓ²(ℕ, ℝ)` from a sequence of functions.
+The lemmas on these feature maps are in `CompactSVGD/FeatureMap/`.
 
 ## Main definitions
 
@@ -31,6 +33,8 @@ their trajectories; their lemmas are in `CompactSVGD/FeatureMap/`.
 * `SVGD.toVectorField Φ h`: the vector field `y ↦ (⟪hᵢ, Φ y⟫)ᵢ` of `h ∈ 𝓗[d, H₀]`.
 * `SVGD.trajectory Φ m s x`: the trajectory through `x` at time `s` of the time-dependent vector
   field of a curve `m` in `𝓗[d, H₀]`.
+* `SVGD.seqFeatureMap g`: the feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²` of a sequence of functions `gₙ`,
+  with the weights `wₙ = SVGD.seqWeight g n`.
 
 ## Notation
 
@@ -112,5 +116,25 @@ def toVectorField (Φ : EuclideanSpace ℝ (Fin d) → H₀) (h : 𝓗[d, H₀])
 def trajectory (Φ : EuclideanSpace ℝ (Fin d) → H₀) (m : ℝ → 𝓗[d, H₀]) (s : ℝ)
     (x : EuclideanSpace ℝ (Fin d)) : ℝ → EuclideanSpace ℝ (Fin d) :=
   ODE.globalSolution (fun t ↦ toVectorField Φ (m t)) s x
+
+/-! ### The feature map of a sequence of functions -/
+
+section Sequence
+
+open scoped lp
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-- The weight `wₙ = 2⁻ⁿ / (1 + Mₙ)` of `gₙ` in `SVGD.seqFeatureMap g`, where
+`Mₙ = sup_x (‖gₙ x‖ + ‖Dgₙ x‖)`. If `gₙ` or its derivative is unbounded, the supremum is `0`. -/
+def seqWeight (g : ℕ → E → ℝ) (n : ℕ) : ℝ :=
+  (2⁻¹ : ℝ) ^ n / (1 + ⨆ x, (‖g n x‖ + ‖fderiv ℝ (g n) x‖))
+
+/-- The feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²(ℕ, ℝ)` of a sequence of functions `gₙ`, with the weights
+`wₙ = SVGD.seqWeight g n`. Its kernel is `∑ₙ wₙ² gₙ(x) gₙ(y)` (`SVGD.inner_seqFeatureMap`). -/
+def seqFeatureMap (g : ℕ → E → ℝ) (x : E) : ℓ²(ℕ, ℝ) :=
+  ∑' n, (seqWeight g n * g n x) • lp.single 2 n 1
+
+end Sequence
 
 end SVGD

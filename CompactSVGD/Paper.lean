@@ -6,16 +6,21 @@ Authors: Gaëtan Serré
 module
 
 public import CompactSVGD.Definitions
+public import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
+public import Mathlib.Analysis.InnerProductSpace.l2Space
 public import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
 
+import CompactSVGD.FeatureMap.Sequence
 import CompactSVGD.FeatureMap.Trajectory
 import CompactSVGD.FeatureMap.VectorField
 import CompactSVGD.ForMathlib.Analysis.Calculus.Barbalat
 import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
 import CompactSVGD.ForMathlib.Analysis.Convex.TotallyBounded
+import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.PiL2
 import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.UnitBall
+import CompactSVGD.ForMathlib.Analysis.ODE.Linear
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.FirstVariation
 import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
@@ -24,9 +29,12 @@ import CompactSVGD.ForMathlib.MeasureTheory.Measure.Map
 import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
 import CompactSVGD.ForMathlib.Topology.ContinuousMap.Bounded.Causal
 import CompactSVGD.ForMathlib.Topology.Order.Gluing
+import Mathlib.Analysis.Calculus.ContDiff.WithLp
 import Mathlib.MeasureTheory.Function.L2Space
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.MeasureTheory.Measure.LevyProkhorovMetric
 import Mathlib.MeasureTheory.Measure.Prokhorov
+import Mathlib.Topology.ContinuousMap.Weierstrass
 
 /-!
 # Mean-field SVGD on a compact domain
@@ -36,7 +44,8 @@ This file formalizes the theory of SVGD developed in the appendix of the revised
 definition and result of the paper appears here, in the paper's order, with its proof. The only
 additions are the construction of the mean-field SVGD flow, which the AISTATS 2025 version
 [Serre2025] assumes, the primed versions of the results along the flow, stated for every solution
-of the mean-field equation, and private technical lemmas. The numbering is that of [Serre2025].
+of the mean-field equation, a Stein-universal kernel on `[-1, 1]` in the last section, and private
+technical lemmas. The numbering is that of [Serre2025].
 
 The general mathematics (divergence, global solutions of ODEs, Barbalat's lemma, Kullback–Leibler
 divergence along a flow, ...) lives in `CompactSVGD/ForMathlib/`, and the vector fields of the
@@ -61,6 +70,8 @@ and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
   Kullback–Leibler divergence along it (Theorem A.11).
 * **Appendix B, proofs.** Proposition 3.2, then Lemma B.4, Corollary B.5, Lemma B.6 and
   Theorem 3.1, in the order of the proof of Theorem 3.1.
+* **A Stein-universal kernel on `[-1, 1]`** (not in [Serre2025]). An explicit kernel that satisfies
+  all the hypotheses of Theorem 3.1 in dimension `1`, for every admissible target.
 
 ## Main statements
 
@@ -72,6 +83,9 @@ and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
 * `SVGD.time_derivative_kl`: Theorem A.11.
 * `SVGD.ksd_valid_discrepancy`: Proposition 3.2.
 * `SVGD.weak_convergence`: **Theorem 3.1**.
+* `SVGD.admissibleFeatureMap_intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`: the
+  kernel of `SVGD.intervalFeatureMap` satisfies the hypotheses of Theorem 3.1 on `[-1, 1]`.
+* `SVGD.weak_convergence_intervalFeatureMap`: Theorem 3.1 on `[-1, 1]` with this kernel.
 
 ## Notation
 
@@ -1165,5 +1179,310 @@ theorem weak_convergence (hU : IsSteinUniversal Φ s Ω) (g : EuclideanSpace ℝ
     (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL)) hU g hg
 
 end WeakConvergence
+
+end SVGD
+
+/-! ## A Stein-universal kernel on `[-1, 1]`
+
+This section is not in [Serre2025]. It builds a kernel that satisfies all the hypotheses of
+Theorem 3.1 in dimension `1`, on `Ω = [-1, 1]` (`closedBall 0 1`), for every admissible target.
+
+The kernel is `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)`, with the feature map
+`SVGD.intervalFeatureMap : y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of `SVGD.seqFeatureMap`. The polynomial
+`Rₙ` (`SVGD.intervalPoly n`) is the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. Thus it is
+a multiple of `w(t) = 1 - t²`, and `k` is a weighted kernel `w(x) w(y) k₀(x, y)` on `Ω`. The cutoff
+`χ` (`SVGD.intervalCutoff`) equals `1` on `[-2, 2]`. It makes the feature map bounded and Lipschitz
+on `ℝ`, and the weights `wₙ > 0` make it `C¹`. As the `Rₙ` vanish at `±1`, so does the feature
+map (`SVGD.admissibleFeatureMap_intervalFeatureMap`).
+
+Stein-universality (`SVGD.isSteinUniversal_intervalFeatureMap`) only needs a score `σ` continuous
+on `Ω`. Let `φ` be continuous on `Ω`. The one-dimensional Stein equation `σ u + u' = φ - c` has a
+solution with `u(-1) = u(1) = 0` (`exists_hasDerivAt_sub_sub_mul`). By the Weierstrass
+theorem, `u'` is uniformly close to a polynomial `q = ∑ₙ qₙ tⁿ` on `Ω`. Then `R = ∑ₙ qₙ Rₙ` is
+close to `u` in `C¹(Ω)`, and `𝒜_π R + c = σ R + R' + c` is uniformly close to `φ` on `Ω`.
+
+In dimension `d ≥ 2`, a kernel of this form cannot vanish on the frontier of a box and be
+Stein-universal: at a corner, `ξ_y = 0`. Weighted kernels on domains with a `C²` frontier are not
+formalized. -/
+
+namespace SVGD
+
+open scoped lp
+
+/-- The cutoff `χ` of `SVGD.intervalFeatureMap`: a smooth function on `ℝ`, equal to `1` on
+`[-2, 2]` and supported in `(-3, 3)`. -/
+@[simps]
+def intervalCutoff : ContDiffBump (0 : ℝ) where
+  rIn := 2
+  rOut := 3
+  rIn_pos := two_pos
+  rIn_lt_rOut := by norm_num
+
+/-- The polynomial `Rₙ(t) = (tⁿ⁺¹ - (-1)ⁿ⁺¹) / (n + 1) - mₙ (t + 1)`, with
+`mₙ = (1 - (-1)ⁿ⁺¹) / (2 (n + 1))`: the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. -/
+def intervalPoly (n : ℕ) (t : ℝ) : ℝ :=
+  (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1) - (1 - (-1) ^ (n + 1)) / (2 * (n + 1)) * (t + 1)
+
+/-- **A Stein-universal kernel on `[-1, 1]`.** The feature map `y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of
+the kernel `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)` on `ℝ`, where `χ = SVGD.intervalCutoff`,
+`Rₙ = SVGD.intervalPoly n` and the weights `wₙ > 0` are those of `SVGD.seqFeatureMap`. -/
+def intervalFeatureMap (y : EuclideanSpace ℝ (Fin 1)) : ℓ²(ℕ, ℝ) :=
+  seqFeatureMap (fun n t ↦ intervalCutoff t * intervalPoly n t) (y 0)
+
+/-- The feature map of a sequence of functions (`CompactSVGD/Definitions.lean`). -/
+example (g : ℕ → ℝ → ℝ) (x : ℝ) :
+    seqFeatureMap g x = ∑' n, (seqWeight g n * g n x) • lp.single 2 n 1 :=
+  rfl
+
+/-- The weights of `SVGD.seqFeatureMap` (`CompactSVGD/Definitions.lean`). -/
+example (g : ℕ → ℝ → ℝ) (n : ℕ) :
+    seqWeight g n = (2⁻¹ : ℝ) ^ n / (1 + ⨆ x, (‖g n x‖ + ‖fderiv ℝ (g n) x‖)) :=
+  rfl
+
+private theorem intervalCutoff_eq_one {t : ℝ} (ht : |t| ≤ 2) : intervalCutoff t = 1 :=
+  intervalCutoff.one_of_mem_closedBall <| by
+    rwa [mem_closedBall, Real.dist_eq, sub_zero, intervalCutoff_rIn]
+
+private theorem intervalPoly_neg_one (n : ℕ) : intervalPoly n (-1) = 0 := by
+  simp [intervalPoly]
+
+private theorem intervalPoly_one (n : ℕ) : intervalPoly n 1 = 0 := by
+  rw [intervalPoly]
+  field_simp
+  ring
+
+private theorem hasDerivAt_intervalPoly (n : ℕ) (t : ℝ) :
+    HasDerivAt (intervalPoly n) (t ^ n - (1 - (-1) ^ (n + 1)) / (2 * (n + 1))) t := by
+  have h₁ : HasDerivAt (fun t : ℝ ↦ (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1)) (t ^ n) t := by
+    convert ((hasDerivAt_pow (n + 1) t).sub_const ((-1 : ℝ) ^ (n + 1))).div_const
+      ((n : ℝ) + 1) using 1
+    rw [Nat.add_sub_cancel]
+    push_cast
+    field_simp
+  have h₂ := ((hasDerivAt_id t).add_const 1).const_mul ((1 - (-1 : ℝ) ^ (n + 1)) / (2 * (n + 1)))
+  rw [mul_one] at h₂
+  exact h₁.sub h₂
+
+private theorem contDiff_intervalCutoff_mul (n : ℕ) :
+    ContDiff ℝ 1 fun t ↦ intervalCutoff t * intervalPoly n t :=
+  intervalCutoff.contDiff.mul (by unfold intervalPoly; fun_prop)
+
+private theorem bddAbove_intervalCutoff_mul (n : ℕ) :
+    BddAbove (range fun t ↦ ‖intervalCutoff t * intervalPoly n t‖ +
+      ‖fderiv ℝ (fun t ↦ intervalCutoff t * intervalPoly n t) t‖) := by
+  have hc : HasCompactSupport fun t ↦ intervalCutoff t * intervalPoly n t :=
+    intervalCutoff.hasCompactSupport.mul_right
+  have hf := contDiff_intervalCutoff_mul n
+  exact (hf.continuous.norm.add (hf.continuous_fderiv one_ne_zero).norm)
+    |>.bddAbove_range_of_hasCompactSupport (hc.norm.add (hc.fderiv ℝ).norm)
+
+/-- **The kernel of `SVGD.intervalFeatureMap` is admissible** on `Ω = [-1, 1]`: its feature map is
+`C¹`, `2`-Lipschitz, bounded by `2`, and vanishes at `±1`. -/
+theorem admissibleFeatureMap_intervalFeatureMap :
+    AdmissibleFeatureMap intervalFeatureMap (closedBall 0 1) 2 2 := by
+  refine ⟨(contDiff_seqFeatureMap contDiff_intervalCutoff_mul bddAbove_intervalCutoff_mul).comp
+    (by fun_prop : ContDiff ℝ 1 fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0), ?_,
+    fun y ↦ norm_seqFeatureMap_le bddAbove_intervalCutoff_mul (y 0), fun y hy ↦ ?_⟩
+  · have h : LipschitzWith 1 fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0 :=
+      LipschitzWith.of_dist_le_mul fun y z ↦ by
+        simpa [dist_eq_norm] using PiLp.norm_apply_le (y - z) 0
+    have := (lipschitzWith_seqFeatureMap contDiff_intervalCutoff_mul
+      bddAbove_intervalCutoff_mul).comp h
+    rwa [mul_one] at this
+  · rw [frontier_closedBall 0 one_ne_zero, mem_sphere_zero_iff_norm,
+      EuclideanSpace.norm_fin_one, Real.norm_eq_abs] at hy
+    refine seqFeatureMap_eq_zero fun n ↦ ?_
+    rcases (abs_eq zero_le_one).1 hy with h | h <;> simp [h, intervalPoly_one, intervalPoly_neg_one]
+
+/-- In dimension `1`, if `⟪h, Φ y⟫ = G(y₀)` for every `y`, then the Stein operator of the vector
+field of `h` is `𝒜 h (x) = s x (e₀) G(x₀) + G'(x₀)`. -/
+private theorem steinOperator_eq_of_inner_eq {H₀ : Type*} [NormedAddCommGroup H₀]
+    [InnerProductSpace ℝ H₀] {Φ : EuclideanSpace ℝ (Fin 1) → H₀}
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))} {h : H₀} {G : ℝ → ℝ}
+    (hG : Differentiable ℝ G) (hΦ : ∀ y, ⟪h, Φ y⟫ = G (y 0)) (x : EuclideanSpace ℝ (Fin 1)) :
+    steinOperator s (toVectorField Φ (WithLp.toLp 2 fun _ ↦ h : 𝓗[1, H₀])) x =
+      s x (EuclideanSpace.single 0 1) * G (x 0) + deriv G (x 0) := by
+  have hV : toVectorField Φ (WithLp.toLp 2 fun _ ↦ h : 𝓗[1, H₀]) =
+      fun y ↦ G (y 0) • EuclideanSpace.single 0 1 := by
+    funext y
+    ext i
+    fin_cases i
+    simp [hΦ]
+  have h₁ : HasDerivAt G (deriv G (x 0)) (EuclideanSpace.proj (0 : Fin 1) x) :=
+    (hG (x 0)).hasDerivAt
+  have h₂ :=
+    (h₁.comp_hasFDerivAt x (EuclideanSpace.proj (𝕜 := ℝ) (0 : Fin 1)).hasFDerivAt).smul_const
+      (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1))
+  have hd : fderiv ℝ (fun y : EuclideanSpace ℝ (Fin 1) ↦
+      G (y 0) • (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1))) x =
+      (deriv G (x 0) • EuclideanSpace.proj (𝕜 := ℝ) (0 : Fin 1)).smulRight
+        (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1)) :=
+    h₂.fderiv
+  rw [steinOperator, hV, divergence_euclideanSpace, hd]
+  simp [mul_comm]
+
+/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|m| ≤ δ`. -/
+private theorem abs_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
+    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
+    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) : |m| ≤ δ := by
+  -- `∫₋₁¹ (e - m) = f(1) - f(-1) = 0`, so `2 m = ∫₋₁¹ e`, and `|∫₋₁¹ e| ≤ 2 δ`.
+  have h₁ : ∫ τ in (-1)..1, (e τ - m) = 0 := by
+    rw [intervalIntegral.integral_eq_sub_of_hasDerivAt (fun τ _ ↦ hf τ)
+      ((he.sub continuous_const).intervalIntegrable _ _), ha, hb, sub_zero]
+  rw [intervalIntegral.integral_sub (he.intervalIntegrable _ _) intervalIntegrable_const,
+    intervalIntegral.integral_const] at h₁
+  have h₂ : ‖∫ τ in (-1)..1, e τ‖ ≤ δ * |1 - (-1)| :=
+    intervalIntegral.norm_integral_le_of_norm_le_const fun τ hτ ↦ by
+      rw [uIoc_of_le (by norm_num)] at hτ
+      exact (Real.norm_eq_abs _).trans_le (heδ τ (Ioc_subset_Icc_self hτ))
+  have h₃ : ∫ τ in (-1)..1, e τ = 2 * m := by
+    norm_num at h₁
+    linarith
+  rw [h₃, Real.norm_eq_abs, abs_mul] at h₂
+  norm_num at h₂
+  linarith
+
+/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|f| ≤ 4 δ` on
+`[-1, 1]`. -/
+private theorem abs_apply_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
+    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
+    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) :
+    |f t| ≤ 4 * δ := by
+  have hm := abs_le_of_hasDerivAt_sub hf he ha hb heδ
+  -- `f(t) = ∫₋₁ᵗ (e - m)`, with `|e - m| ≤ 2 δ` on `[-1, t]`.
+  have hint : ∫ τ in (-1)..t, (e τ - m) = f t := by
+    rw [intervalIntegral.integral_eq_sub_of_hasDerivAt (fun τ _ ↦ hf τ)
+      ((he.sub continuous_const).intervalIntegrable _ _), ha, sub_zero]
+  rw [← hint, ← Real.norm_eq_abs]
+  calc ‖∫ τ in (-1)..t, (e τ - m)‖ ≤ 2 * δ * |t - (-1)| :=
+        intervalIntegral.norm_integral_le_of_norm_le_const fun τ hτ ↦ by
+          rw [uIoc_of_le ht.1] at hτ
+          rw [Real.norm_eq_abs]
+          exact (abs_sub _ _).trans (by linarith [heδ τ ⟨hτ.1.le, hτ.2.trans ht.2⟩])
+    _ ≤ 2 * δ * 2 := by
+        refine mul_le_mul_of_nonneg_left ?_ (by linarith [abs_nonneg m])
+        rw [abs_le]
+        constructor <;> linarith [ht.1, ht.2]
+    _ = 4 * δ := by ring
+
+/-- **The kernel of `SVGD.intervalFeatureMap` is Stein-universal** on `Ω = [-1, 1]`, for every
+score `s` continuous on `Ω`. -/
+theorem isSteinUniversal_intervalFeatureMap
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
+    (hs : ContinuousOn s (closedBall 0 1)) :
+    IsSteinUniversal intervalFeatureMap s (closedBall 0 1) := by
+  have hp : Continuous fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0 := by fun_prop
+  have hΩ {x : EuclideanSpace ℝ (Fin 1)} : x ∈ closedBall 0 1 ↔ x 0 ∈ Icc (-1 : ℝ) 1 := by
+    rw [mem_closedBall_zero_iff, EuclideanSpace.norm_fin_one, Real.norm_eq_abs, abs_le, mem_Icc]
+  -- The map `ι : ℝ → Ω`, `t ↦ ρ(t) e₀`, where `ρ` is the projection of `ℝ` onto `[-1, 1]`.
+  have h₁ : (-1 : ℝ) ≤ 1 := by norm_num
+  let ι : ℝ → EuclideanSpace ℝ (Fin 1) := fun t ↦
+    (projIcc (-1) 1 h₁ t : ℝ) • EuclideanSpace.single 0 1
+  have hιΩ (t : ℝ) : ι t ∈ closedBall (0 : EuclideanSpace ℝ (Fin 1)) 1 :=
+    hΩ.2 (by simp [ι])
+  have hιc : Continuous ι := (continuous_subtypeVal.comp continuous_projIcc).smul continuous_const
+  have hιx {x : EuclideanSpace ℝ (Fin 1)} (hx : x ∈ closedBall 0 1) : ι (x 0) = x := by
+    simp [ι, projIcc_of_mem h₁ (hΩ.1 hx), EuclideanSpace.apply_zero_smul_single_fin_one]
+  -- The score `σ` and the function `φ'` to approximate, on `ℝ`.
+  let σ : ℝ → ℝ := fun t ↦ s (ι t) (EuclideanSpace.single 0 1)
+  have hσ : Continuous σ := (hs.comp_continuous hιc hιΩ).clm_apply continuous_const
+  refine fun φ ↦ Metric.mem_closure_iff.2 fun ε hε ↦ ?_
+  let φ' : ℝ → ℝ := fun t ↦ φ ⟨ι t, hιΩ t⟩
+  have hφ' : Continuous φ' := φ.continuous.comp (hιc.subtype_mk hιΩ)
+  -- The solution `u` of the Stein equation `σ u + u' = φ' - c` with `u(-1) = u(1) = 0`.
+  obtain ⟨c, u, hua, hub, hu⟩ := exists_hasDerivAt_sub_sub_mul hσ hφ' (-1) 1
+  let u' : ℝ → ℝ := fun t ↦ φ' t - c - σ t * u t
+  have huc : Continuous u := continuous_iff_continuousAt.2 fun t ↦ (hu t).continuousAt
+  have hu'c : Continuous u' := (hφ'.sub continuous_const).sub (hσ.mul huc)
+  obtain ⟨S, hS⟩ := isCompact_Icc.exists_bound_of_continuousOn
+    (hσ.continuousOn (s := Icc (-1 : ℝ) 1))
+  set δ := ε / (2 * (2 + 4 * |S|)) with hδ_def
+  have hδ : 0 < δ := by positivity
+  -- A polynomial `q` close to `u'` on `[-1, 1]`, and `R = ∑ₙ qₙ Rₙ`, with `R' = q - m`.
+  obtain ⟨q, hq⟩ := exists_polynomial_near_of_continuousOn (-1) 1 u' hu'c.continuousOn δ hδ
+  let N := q.natDegree + 1
+  let m : ℝ := ∑ n ∈ Finset.range N, q.coeff n * ((1 - (-1) ^ (n + 1)) / (2 * (n + 1)))
+  let R : ℝ → ℝ := fun t ↦ ∑ n ∈ Finset.range N, q.coeff n * intervalPoly n t
+  have hR (t : ℝ) : HasDerivAt R (q.eval t - m) t := by
+    convert HasDerivAt.fun_sum (u := Finset.range N) fun n _ ↦
+      (hasDerivAt_intervalPoly n t).const_mul (q.coeff n) using 1
+    rw [Polynomial.eval_eq_sum_range, ← Finset.sum_sub_distrib]
+    exact Finset.sum_congr rfl fun n _ ↦ by ring
+  -- `R - u` vanishes at `±1`, with derivative `(q - u') - m` and `|q - u'| ≤ δ` on `[-1, 1]`.
+  -- Thus `|m| ≤ δ` and `|R - u| ≤ 4 δ` on `[-1, 1]`.
+  have hD (t : ℝ) : HasDerivAt (fun t ↦ R t - u t) ((q.eval t - u' t) - m) t :=
+    ((hR t).sub (hu t)).congr_deriv (by simp only [u']; ring)
+  have hDa : R (-1) - u (-1) = 0 := by simp [R, intervalPoly_neg_one, hua]
+  have hDb : R 1 - u 1 = 0 := by simp [R, intervalPoly_one, hub]
+  have hqδ (t : ℝ) (ht : t ∈ Icc (-1 : ℝ) 1) : |q.eval t - u' t| ≤ δ := (hq t ht).le
+  have hqc : Continuous fun t ↦ q.eval t - u' t := q.continuous.sub hu'c
+  have hm : |m| ≤ δ := abs_le_of_hasDerivAt_sub hD hqc hDa hDb hqδ
+  -- The element `h` of `ℓ²` with `⟪h, Φ y⟫ = G(y₀)`, where `G = χ R` equals `R` near `[-1, 1]`.
+  let G : ℝ → ℝ := fun t ↦ ∑ n ∈ Finset.range N, q.coeff n * (intervalCutoff t * intervalPoly n t)
+  obtain ⟨h, hh⟩ :=
+    exists_inner_seqFeatureMap_eq bddAbove_intervalCutoff_mul q.coeff (Finset.range N)
+  have hGc : ContDiff ℝ 1 G :=
+    ContDiff.sum fun n _ ↦ contDiff_const.mul (contDiff_intervalCutoff_mul n)
+  have hGR {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) : G =ᶠ[𝓝 t] R := by
+    filter_upwards [Metric.ball_mem_nhds t one_pos] with τ hτ
+    rw [mem_ball, Real.dist_eq, abs_sub_lt_iff] at hτ
+    have hχ : intervalCutoff τ = 1 :=
+      intervalCutoff_eq_one (abs_le.2 ⟨by linarith [ht.1], by linarith [ht.2]⟩)
+    simp [G, R, hχ]
+  -- The Stein operator of `f = (h) ∈ 𝓗` is `s e₀ G + G'`.
+  set f : 𝓗[1, ℓ²(ℕ, ℝ)] := WithLp.toLp 2 fun _ ↦ h
+  have hA (x : EuclideanSpace ℝ (Fin 1)) :
+      steinOperator s (toVectorField intervalFeatureMap f) x =
+        s x (EuclideanSpace.single 0 1) * G (x 0) + deriv G (x 0) :=
+    steinOperator_eq_of_inner_eq (hGc.differentiable one_ne_zero) (fun y ↦ hh (y 0)) x
+  have hcont : ContinuousOn (fun x ↦ steinOperator s (toVectorField intervalFeatureMap f) x + c)
+      (closedBall 0 1) := by
+    simp_rw [hA]
+    exact (((hs.clm_apply continuousOn_const).mul (hGc.continuous.comp hp).continuousOn).add
+      ((hGc.continuous_deriv le_rfl).comp hp).continuousOn).add continuousOn_const
+  refine ⟨⟨_, hcont.domRestrict⟩, ⟨f, c, fun x ↦ rfl⟩, ?_⟩
+  -- On `Ω`, `φ - 𝒜 f - c = -((q - u') - m) - σ (R - u)`.
+  refine ((ContinuousMap.dist_le (by positivity)).2 fun x ↦ ?_).trans_lt (half_lt_self hε)
+  obtain ⟨x, hx⟩ := x
+  have ht : x 0 ∈ Icc (-1 : ℝ) 1 := hΩ.1 hx
+  have hσt : s x (EuclideanSpace.single 0 1) = σ (x 0) := by
+    change _ = s (ι (x 0)) _
+    rw [hιx hx]
+  have hφt : φ ⟨x, hx⟩ = φ' (x 0) := congrArg φ (Subtype.ext (hιx hx).symm)
+  have hσS : |σ (x 0)| ≤ |S| := by
+    have := hS _ ht
+    rw [Real.norm_eq_abs] at this
+    exact this.trans (le_abs_self S)
+  have hRu : |R (x 0) - u (x 0)| ≤ 4 * δ := abs_apply_le_of_hasDerivAt_sub hD hqc hDa hDb hqδ ht
+  simp only [ContinuousMap.coe_mk, domRestrict_apply, hA, (hGR ht).eq_of_nhds,
+    ((hR (x 0)).congr_of_eventuallyEq (hGR ht)).deriv, hσt, hφt, Real.dist_eq]
+  calc |φ' (x 0) - (σ (x 0) * R (x 0) + (q.eval (x 0) - m) + c)|
+      = |-(q.eval (x 0) - u' (x 0) - m) - σ (x 0) * (R (x 0) - u (x 0))| := by
+        congr 1
+        simp only [u']
+        ring
+    _ ≤ |q.eval (x 0) - u' (x 0) - m| + |σ (x 0)| * |R (x 0) - u (x 0)| := by
+        rw [← abs_mul, ← abs_neg (q.eval (x 0) - u' (x 0) - m)]
+        exact abs_sub _ _
+    _ ≤ 2 * δ + |S| * (4 * δ) := by
+        gcongr
+        exact (abs_sub _ _).trans (by linarith [hqδ _ ht])
+    _ = ε / 2 := by
+        rw [hδ_def]
+        field_simp
+
+/-- **Weak convergence of SVGD on `[-1, 1]`** (Theorem 3.1 of [Serre2025] in dimension `1`, with an
+explicit kernel). Let `π` be an admissible target on `Ω = [-1, 1]` and let `μ ∈ 𝒫(Ω)` with
+`KL(μ ‖ π) < ∞`. Along the mean-field SVGD flow of the kernel of `SVGD.intervalFeatureMap`,
+`μ_t ⇀ π`: for every `g` continuous on `Ω`, `E_{μ_t}[g] → E_π[g]` as `t → ∞`. -/
+theorem weak_convergence_intervalFeatureMap {π μ : Measure (EuclideanSpace ℝ (Fin 1))}
+    {p : EuclideanSpace ℝ (Fin 1) → ℝ}
+    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
+    (hπ : AdmissibleTarget (closedBall 0 1) π p s) [IsProbabilityMeasure μ] (hKL : klDiv μ π ≠ ∞)
+    (g : EuclideanSpace ℝ (Fin 1) → ℝ) (hg : ContinuousOn g (closedBall 0 1)) :
+    Tendsto (fun t ↦ ∫ x, g x ∂μ.map (meanFieldFlow intervalFeatureMap s μ t)) atTop
+      (𝓝 (∫ x, g x ∂π)) :=
+  weak_convergence ⟨isCompact_closedBall 0 1, hπ, admissibleFeatureMap_intervalFeatureMap⟩ hKL
+    (isSteinUniversal_intervalFeatureMap hπ.continuousOn_score) g hg
 
 end SVGD

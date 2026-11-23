@@ -15,15 +15,18 @@ below). The project has three parts.
 
 1. **`CompactSVGD/ForMathlib/`**, the general mathematics that Mathlib does not have yet: the
    divergence of a vector field, global solutions of Lipschitz ODEs and the Jacobian of their
-   flows, Liouville's formula, Barbalat's lemma, fixed points of causal maps, and the
-   Kullback–Leibler divergence along a flow. Nothing there mentions an object of the paper.
+   flows, Liouville's formula, Barbalat's lemma, fixed points of causal maps, the two-point problem
+   for a scalar linear ODE, and the Kullback–Leibler divergence along a flow. Nothing there mentions
+   an object of the paper.
 2. **`CompactSVGD/FeatureMap/`**, the lemmas on the vector fields `y ↦ (⟪hᵢ, Φ y⟫)ᵢ` of the
-   elements `h` of the product RKHS `𝓗 = H₀ᵈ` of a feature map `Φ : ℝᵈ → H₀`, and on the
-   trajectories of the vector field of a curve in `𝓗`.
+   elements `h` of the product RKHS `𝓗 = H₀ᵈ` of a feature map `Φ : ℝᵈ → H₀`, on the
+   trajectories of the vector field of a curve in `𝓗`, and on the feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²`
+   of a sequence of functions.
 3. **`CompactSVGD/Paper.lean`**, the paper itself. It follows the appendix, in its order: every
    definition and result of the paper appears there, with its proof. The only additions are the
    construction of the mean-field SVGD flow, which the AISTATS 2025 version assumes, the primed
-   versions of the results along the flow, and private technical lemmas. The docstrings give the
+   versions of the results along the flow, a Stein-universal kernel on `[-1, 1]` in the last
+   section, and private technical lemmas. The docstrings give the
    paper's numbering and the proofs are commented, so that the file can be read alongside the paper.
    The hypotheses on the space, the target and the kernel are gathered in one structure,
    `SVGD.StandingAssumptions`. The definitions it uses from `CompactSVGD/Definitions.lean` are
@@ -55,6 +58,7 @@ All the declarations below are in [`CompactSVGD/Paper.lean`](CompactSVGD/Paper.l
 | Proposition 3.2 (the KSD is a valid discrepancy) | `SVGD.ksd_valid_discrepancy` |
 | Lemma B.4, Corollary B.5, Lemma B.6 | `SVGD.ksd_uniform_continuity`, `SVGD.ksd_convergence`, `SVGD.cluster_points` |
 | **Theorem 3.1 (weak convergence of SVGD)** | `SVGD.weak_convergence` |
+| A kernel with all the hypotheses of Theorem 3.1 on `[-1, 1]` (not in the paper) | `SVGD.intervalFeatureMap`, `SVGD.admissibleFeatureMap_intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`, `SVGD.weak_convergence_intervalFeatureMap` |
 
 The mean-field flow is described by the curve `m : ℝ → 𝓗` of its update directions: its trajectories
 are `T_t = trajectory Φ m 0 · t`, and the mean-field equation is `m t = φ*_{μ_t}` for `t ≥ 0`
@@ -65,6 +69,14 @@ claimed. `SVGD.meanFieldCurve Φ s μ` picks one solution and `SVGD.meanFieldFlo
 Theorem A.11, Lemma B.4, Corollary B.5, Lemma B.6 and Theorem 3.1 are stated for this flow, so they
 do not assume its existence. Their primed versions (such as `SVGD.weak_convergence'`) hold for every
 solution `m` of the mean-field equation.
+
+The last section of `CompactSVGD/Paper.lean` shows that the hypotheses of Theorem 3.1 can be met.
+In dimension `1`, on `Ω = [-1, 1]`, the kernel `k(x, y) = χ(x) χ(y) ∑ₙ wₙ² Rₙ(x) Rₙ(y)` is admissible
+and Stein-universal for every score continuous on `Ω`. Here `Rₙ` is the primitive of `tⁿ - mₙ`
+that vanishes at `±1`, `χ` is a smooth cutoff equal to `1` on `[-2, 2]`, and `wₙ > 0`. The proof of
+Stein-universality solves the Stein equation `σ u + u' = φ - c` with `u(±1) = 0`, then approximates
+`u'` by a polynomial (Weierstrass). Thus `SVGD.weak_convergence_intervalFeatureMap` is Theorem 3.1 on
+`[-1, 1]` with no hypothesis on the kernel. Kernels in dimension `d ≥ 2` are not formalized.
 
 ## Checking the statements with `comparator`
 
