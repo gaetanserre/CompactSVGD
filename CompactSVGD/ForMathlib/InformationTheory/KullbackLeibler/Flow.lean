@@ -30,6 +30,7 @@ equation or time regularity is needed for `μₜ`.
 
 ## Main statements
 
+* `InformationTheory.klDiv_map_flow_ne_top`: the divergence stays finite along the flow.
 * `InformationTheory.hasDerivAt_toReal_klDiv_map_flow`: **the dissipation of the
   Kullback–Leibler divergence**.
 
@@ -83,6 +84,16 @@ variable (hΩ : IsCompact Ω) (hp : Measurable p) (hpc : ContinuousOn p Ω)
   (hα₀ : ∀ x, α x 0 = x)
   (hμ : klDiv μ ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞)
 include hΩ hp hpc hp₀ hvc hvK hv hDv hv₀ hα hα₀ hμ
+
+/-- **The Kullback–Leibler divergence stays finite along a flow.** Let `π = p · vol|_Ω` as above,
+let `α` be the flow of a vector field `v` vanishing on the frontier of `Ω`, and let `μ` be a finite
+measure with `KL(μ ‖ π) < ∞`. Then `KL((α · t)#μ ‖ π) < ∞` at every time `t`. -/
+theorem klDiv_map_flow_ne_top (t : ℝ) :
+    klDiv (μ.map (α · t)) ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞ := by
+  obtain ⟨e, he, h₁, h₂, h₃, h₄⟩ :=
+    exists_measurableEquiv_flow (μ := μ) hvc hvK hv hDv hv₀ hα hα₀ t
+  have := klDiv_map_ne_top hΩ hp hpc hp₀ h₁ h₂ h₃ h₄ hμ
+  rwa [he] at this
 
 /-- **The dissipation of the Kullback–Leibler divergence along a flow** (proof of Theorem A.11 of
 [Serre2025]). Let

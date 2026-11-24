@@ -57,6 +57,14 @@ variable [IsFiniteMeasure μ] [IsFiniteMeasure ν] (hμν : μ ≪ ν) (h_int : 
   (hw : AEMeasurable w ν) (hw₀ : ∀ᵐ x ∂ν, 0 < w x) (hlog : Integrable (fun x ↦ log (w x)) μ)
 include hμν h_int hw hw₀ hlog
 
+/-- **Reweighting the reference measure keeps the divergence finite.** If `μ ≪ ν` with an
+integrable log-likelihood ratio, and `w` is a positive weight with `log w` integrable against `μ`,
+then `KL(μ ‖ w • ν) < ∞`. -/
+theorem klDiv_withDensity_ofReal_right_ne_top :
+    klDiv μ (ν.withDensity fun x ↦ ENNReal.ofReal (w x)) ≠ ∞ :=
+  klDiv_ne_top (hμν.withDensity_ofReal hw hw₀)
+    ((h_int.sub hlog).congr (llr_withDensity_ofReal_right hμν hw hw₀).symm)
+
 /-- **Reweighting the reference measure.** If `μ ≪ ν` with an integrable log-likelihood ratio,
 and `w` is a positive weight with `log w` integrable against `μ`, then
 `KL(μ ‖ w • ν) = KL(μ ‖ ν) - ∫ log w dμ + (w • ν)(univ) - ν(univ)`. -/

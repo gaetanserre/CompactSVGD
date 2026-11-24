@@ -26,6 +26,7 @@ the proof transports `π` backwards instead of `μ` forwards.
 
 ## Main statements
 
+* `InformationTheory.klDiv_map_ne_top`: `KL(e#μ ‖ π) < ∞`.
 * `InformationTheory.toReal_klDiv_map_eq`: the formula above.
 -/
 
@@ -50,6 +51,55 @@ variable {μ : Measure E} [IsFiniteMeasure μ] (hΩ : IsCompact Ω) (hp : Measur
   (hμ : klDiv μ ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞)
 include hΩ hp hpc hp₀ he himage hdet hdetμ hμ
 
+/-- The change of variables behind `InformationTheory.toReal_klDiv_map_eq`. Transporting `π`
+backwards by `e` reweights it by `w = (p ∘ e) det De / p`, a positive weight with `μ`-integrable
+logarithm `log p ∘ e - log p + log det De`. -/
+private theorem exists_weight :
+    ∃ w : E → ℝ, Measurable w ∧
+      (∀ᵐ x ∂(vol.restrict Ω).withDensity fun x ↦ .ofReal (p x), 0 < w x) ∧
+      Integrable (fun x ↦ log (w x)) μ ∧
+      ((fun x ↦ log (w x)) =ᵐ[μ] fun x ↦ log (p (e x)) - log (p x) + log (fderiv ℝ e x).det) ∧
+      ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)).map e.symm =
+        ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)).withDensity
+          fun x ↦ .ofReal (w x) := by
+  set ν := (vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)
+  have hνΩ : ∀ᵐ x ∂ν, x ∈ Ω := ae_withDensity_restrict_mem hΩ.measurableSet _
+  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ
+  have heΩ {x : E} (hx : x ∈ Ω) : e x ∈ Ω := himage ▸ mem_image_of_mem e hx
+  -- The weight `w = (p ∘ e) · det De / p`, its measurability and positivity.
+  set w : E → ℝ := fun x ↦ p (e x) * (fderiv ℝ e x).det / p x
+  have hw₀ {x : E} (hx : x ∈ Ω) : 0 < w x :=
+    div_pos (mul_pos (hp₀ _ (heΩ hx)) (hdet x hx)) (hp₀ x hx)
+  -- The logarithm of the weight and its integrability.
+  have hlogw : (fun x ↦ log (w x)) =ᵐ[μ] fun x ↦ log (p (e x)) - log (p x) +
+      log (fderiv ℝ e x).det := by
+    filter_upwards [hμΩ] with x hx
+    rw [log_div (mul_pos (hp₀ _ (heΩ hx)) (hdet x hx)).ne' (hp₀ x hx).ne',
+      log_mul (hp₀ _ (heΩ hx)).ne' (hdet x hx).ne']
+    ring
+  have hlogp : ContinuousOn (fun x ↦ log (p x)) Ω := hpc.log fun x hx ↦ (hp₀ x hx).ne'
+  have hlogpe : ContinuousOn (fun x ↦ log (p (e x))) Ω :=
+    hlogp.comp (fun x hx ↦ (he x hx).continuousAt.continuousWithinAt) fun _ hx ↦ heΩ hx
+  refine ⟨w, ((hp.comp e.measurable).mul (measurable_det_fderiv ℝ e)).div hp,
+    hνΩ.mono fun _ hx ↦ hw₀ hx, (((hlogpe.integrable_of_ae_mem hΩ hμΩ).sub
+      (hlogp.integrable_of_ae_mem hΩ hμΩ)).add hdetμ).congr hlogw.symm, hlogw, ?_⟩
+  -- Transport `π` backwards, by the change of variables formula.
+  exact map_symm_withDensity_eq_withDensity_det_fderiv (vol := vol) hΩ.measurableSet hp hp₀ he
+    himage hdet
+
+/-- **The Kullback–Leibler divergence of a transported measure is finite.** Let `π = p · vol|_Ω`,
+with `Ω` compact and `p` continuous and positive on `Ω`. Let `e` be a measurable equivalence,
+differentiable on `Ω`, mapping `Ω` onto `Ω`, with a positive Jacobian determinant on `Ω` whose
+logarithm is `μ`-integrable. If `KL(μ ‖ π) < ∞`, then `KL(e#μ ‖ π) < ∞`. -/
+theorem klDiv_map_ne_top :
+    klDiv (μ.map e) ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞ := by
+  obtain ⟨hμν, hllr⟩ := klDiv_ne_top_iff.1 hμ
+  have : IsFiniteMeasure ((vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) :=
+    isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
+  obtain ⟨w, hw, hw₀, hlog, -, hνe⟩ := exists_weight hΩ hp hpc hp₀ he himage hdet hdetμ hμ
+  rw [e.klDiv_map_left, hνe]
+  exact klDiv_withDensity_ofReal_right_ne_top hμν hllr hw.aemeasurable hw₀ hlog
+
 /-- **The Kullback–Leibler divergence of a transported measure.** Let `π = p · vol|_Ω`, with `Ω`
 compact and `p` continuous and positive on `Ω`. Let `e` be a measurable equivalence,
 differentiable on `Ω`, mapping `Ω` onto `Ω`, with a positive Jacobian determinant on `Ω` whose
@@ -63,38 +113,14 @@ theorem toReal_klDiv_map_eq :
   obtain ⟨hμν, hllr⟩ := klDiv_ne_top_iff.1 hμ
   have : IsFiniteMeasure ν :=
     isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
-  have hνΩ : ∀ᵐ x ∂ν, x ∈ Ω := ae_withDensity_restrict_mem hΩ.measurableSet _
-  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ
-  have heΩ {x : E} (hx : x ∈ Ω) : e x ∈ Ω := himage ▸ mem_image_of_mem e hx
-  -- The weight `w = (p ∘ e) · det De / p`, its measurability and positivity.
-  set w : E → ℝ := fun x ↦ p (e x) * (fderiv ℝ e x).det / p x
-  have hw : Measurable w :=
-    ((hp.comp e.measurable).mul (measurable_det_fderiv ℝ e)).div hp
-  have hw₀ {x : E} (hx : x ∈ Ω) : 0 < w x :=
-    div_pos (mul_pos (hp₀ _ (heΩ hx)) (hdet x hx)) (hp₀ x hx)
-  -- The logarithm of the weight and its integrability.
-  have hlogw : (fun x ↦ log (w x)) =ᵐ[μ] fun x ↦ log (p (e x)) - log (p x) +
-      log (fderiv ℝ e x).det := by
-    filter_upwards [hμΩ] with x hx
-    rw [log_div (mul_pos (hp₀ _ (heΩ hx)) (hdet x hx)).ne' (hp₀ x hx).ne',
-      log_mul (hp₀ _ (heΩ hx)).ne' (hdet x hx).ne']
-    ring
-  have hlogp : ContinuousOn (fun x ↦ log (p x)) Ω := hpc.log fun x hx ↦ (hp₀ x hx).ne'
-  have hlog : Integrable (fun x ↦ log (w x)) μ :=
-    ((((hlogp.comp (fun x hx ↦ (he x hx).continuousAt.continuousWithinAt)
-      fun _ hx ↦ heΩ hx).integrable_of_ae_mem hΩ hμΩ).sub
-        (hlogp.integrable_of_ae_mem hΩ hμΩ)).add hdetμ).congr hlogw.symm
-  -- Transport the first argument forward, or the second one backwards.
-  have hνe := map_symm_withDensity_eq_withDensity_det_fderiv (vol := vol) hΩ.measurableSet hp hp₀
-    he himage hdet
+  obtain ⟨w, hw, hw₀, hlog, hlogw, hνe⟩ := exists_weight hΩ hp hpc hp₀ he himage hdet hdetμ hμ
   have : IsFiniteMeasure (ν.withDensity fun x ↦ ENNReal.ofReal (w x)) := by
     rw [← hνe]
     infer_instance
   have hmass : (ν.withDensity fun x ↦ ENNReal.ofReal (w x)).real univ = ν.real univ := by
     rw [← hνe, measureReal_def, Measure.map_apply e.symm.measurable MeasurableSet.univ,
       preimage_univ, measureReal_def]
-  have hw₀' : ∀ᵐ x ∂ν, 0 < w x := hνΩ.mono fun _ hx ↦ hw₀ hx
-  rw [e.klDiv_map_left, hνe, toReal_klDiv_withDensity_ofReal_right hμν hllr hw.aemeasurable hw₀'
+  rw [e.klDiv_map_left, hνe, toReal_klDiv_withDensity_ofReal_right hμν hllr hw.aemeasurable hw₀
     hlog, hmass, integral_congr_ae hlogw]
   ring
 

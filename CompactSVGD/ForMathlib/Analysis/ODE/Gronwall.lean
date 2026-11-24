@@ -16,6 +16,7 @@ directions, by time reversal.
 
 ## Main statements
 
+* `gronwallBound_zero_le`: with a zero initial gap, the bound is at most `ε t e^{K t}`.
 * `norm_le_gronwallBound_of_norm_deriv_le`: the two-sided Grönwall inequality.
 -/
 
@@ -27,6 +28,21 @@ theorem gronwallBound_δ0 (K ε x : ℝ) :
     gronwallBound 0 K ε x = ε * gronwallBound 0 K 1 x := by
   unfold gronwallBound
   split_ifs <;> ring
+
+/-- With a zero initial gap, the Grönwall bound is at most `ε t e^{K t}`. -/
+theorem gronwallBound_zero_le {K ε : ℝ} (hK : 0 ≤ K) (hε : 0 ≤ ε) (t : ℝ) :
+    gronwallBound 0 K ε t ≤ ε * t * Real.exp (K * t) := by
+  rcases hK.eq_or_lt with rfl | hK
+  · simp [gronwallBound_K0]
+  -- `e^{K t} - 1 ≤ K t e^{K t}`, as `1 - K t ≤ e^{-K t}`.
+  have h := Real.add_one_le_exp (-(K * t))
+  have hexp : Real.exp (K * t) * Real.exp (-(K * t)) = 1 := by rw [← Real.exp_add, add_neg_cancel,
+    Real.exp_zero]
+  have hle : Real.exp (K * t) - 1 ≤ K * t * Real.exp (K * t) := by
+    nlinarith [Real.exp_pos (K * t)]
+  simp only [gronwallBound_of_K_ne_0 hK.ne', zero_mul, zero_add]
+  rw [div_mul_eq_mul_div, div_le_iff₀ hK]
+  nlinarith
 
 /-- **Two-sided Grönwall inequality.** If `‖γ' s‖ ≤ K ‖γ s‖ + ε` for every `s` between `t₀` and
 `t`, then `‖γ t‖ ≤ gronwallBound ‖γ t₀‖ K ε |t - t₀|`. -/

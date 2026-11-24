@@ -28,6 +28,7 @@ The lemmas on these feature maps are in `CompactSVGD/FeatureMap/`.
 * `divergence 𝕜 f x`: the divergence of a vector field `f : E → E`, the trace of its derivative.
 * `ContinuousLinearMap.traceCLM 𝕜 E`: the trace of continuous endomorphisms of a
   finite-dimensional space, as a continuous linear functional.
+* `modulusOfContinuityOn f s`: the modulus of continuity of `f` on `s`.
 * `ODE.globalSolution v t₀ x`: a solution on `ℝ` of `α' t = v t (α t)` with `α t₀ = x`.
 * `SVGD.pairing h`: the map `u ↦ (⟪hᵢ, u⟫)ᵢ` from `H₀` to `ℝᵈ`, for `h ∈ 𝓗[d, H₀]`.
 * `SVGD.toVectorField Φ h`: the vector field `y ↦ (⟪hᵢ, Φ y⟫)ᵢ` of `h ∈ 𝓗[d, H₀]`.
@@ -73,6 +74,20 @@ def traceCLM : (E →L[𝕜] E) →L[𝕜] 𝕜 :=
   LinearMap.toContinuousLinearMap ((LinearMap.trace 𝕜 E).comp (coeLM 𝕜))
 
 end ContinuousLinearMap
+
+/-! ### The modulus of continuity of a function on a set -/
+
+section ModulusOfContinuity
+
+variable {α β : Type*} [PseudoMetricSpace α] [PseudoMetricSpace β]
+
+/-- The modulus of continuity of `f` on `s`: `ω(r)` is the supremum of `dist (f x) (f y)` over the
+points `x, y ∈ s` with `dist x y ≤ r`. It is `0` when there is no such pair, and when these
+distances are unbounded. -/
+def modulusOfContinuityOn (f : α → β) (s : Set α) (r : ℝ) : ℝ :=
+  sSup {e | ∃ x ∈ s, ∃ y ∈ s, dist x y ≤ r ∧ dist (f x) (f y) = e}
+
+end ModulusOfContinuity
 
 /-! ### Global solutions of ordinary differential equations -/
 

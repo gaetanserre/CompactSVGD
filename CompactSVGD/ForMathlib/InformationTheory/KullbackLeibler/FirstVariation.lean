@@ -28,6 +28,8 @@ vanishing on the frontier of `Ω`, and `μ` a finite measure with `KL(μ ‖ π)
 
 ## Main statements
 
+* `InformationTheory.eventually_klDiv_map_add_smul_ne_top`: `KL((I + ε v)#μ ‖ π) < ∞` for small
+  `ε`.
 * `InformationTheory.toReal_klDiv_map_add_smul`: the Kullback–Leibler divergence of
   `(I + ε v)#μ`, by the transport formula.
 * `InformationTheory.hasDerivAt_toReal_klDiv_map_add_smul`: **the first variation**.
@@ -50,6 +52,67 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimension
   [MeasurableSpace E] [BorelSpace E] {vol : Measure E} [vol.IsAddHaarMeasure] {Ω : Set E}
   {p : E → ℝ} {v : E → E} {K : ℝ≥0} {ε : ℝ}
 
+omit [FiniteDimensional ℝ E] [MeasurableSpace E] [BorelSpace E] in
+/-- Near `ε = 0`, the perturbation `I + ε v` is a perturbation of the identity, i.e.
+`|ε| K < 1`, and its Jacobian determinant is at least `1 / 2` on `Ω`. -/
+private theorem eventually_lt_one_and_half_le_det (hΩ : IsCompact Ω) (hv : ContDiff ℝ 1 v) :
+    ∀ᶠ ε : ℝ in 𝓝 0, ‖ε‖₊ * K < 1 ∧
+      ∀ x ∈ Ω, 1 / 2 ≤ (fderiv ℝ (fun y ↦ y + ε • v y) x).det := by
+  set J : ℝ → (E →L[ℝ] E) → ℝ := fun ε A ↦
+    LinearMap.det ((ContinuousLinearMap.id ℝ E + ε • A : E →L[ℝ] E) : E →ₗ[ℝ] E)
+  have hJc : Continuous fun q : ℝ × (E →L[ℝ] E) ↦ J q.1 q.2 :=
+    ContinuousLinearMap.continuous_det.comp
+      (continuous_const.add (continuous_fst.smul continuous_snd))
+  have hKD : IsCompact (fderiv ℝ v '' Ω) := hΩ.image (hv.continuous_fderiv one_ne_zero)
+  have hJ₀ : ∀ᶠ ε in 𝓝 0, ∀ A ∈ fderiv ℝ v '' Ω, 1 / 2 ≤ J ε A :=
+    hKD.eventually_forall_of_forall_eventually fun A _ ↦
+      ((hJc.tendsto (0, A)).eventually_const_lt (by norm_num [J])).mono fun _ h ↦ h.le
+  have hK : ∀ᶠ ε : ℝ in 𝓝 0, ‖ε‖₊ * K < 1 :=
+    (((continuous_nnNorm (E := ℝ)).mul continuous_const).tendsto 0).eventually_lt_const
+      (by simp)
+  filter_upwards [hK, hJ₀] with ε hε hJ
+  refine ⟨hε, fun x hx ↦ ?_⟩
+  rw [(hasFDerivAt_add_smul (ε := ε) ((hv.differentiable one_ne_zero) x)).fderiv]
+  exact hJ _ (mem_image_of_mem _ hx)
+
+/-- The perturbation `I + ε v` as a measurable equivalence, with the properties required by the
+transport formula `InformationTheory.toReal_klDiv_map_eq`. -/
+private theorem exists_measurableEquiv_add_smul {μ : Measure E} [IsFiniteMeasure μ]
+    (hvK : LipschitzWith K v)
+    (hε : ‖ε‖₊ * K < 1) (hΩ : IsCompact Ω) (hv : ContDiff ℝ 1 v)
+    (hv₀ : ∀ y ∈ frontier Ω, v y = 0)
+    (hdet : ∀ x ∈ Ω, 0 < (fderiv ℝ (fun y ↦ y + ε • v y) x).det) (hμΩ : ∀ᵐ x ∂μ, x ∈ Ω) :
+    ∃ e : E ≃ᵐ E, ⇑e = (fun x ↦ x + ε • v x) ∧ (∀ x ∈ Ω, DifferentiableAt ℝ e x) ∧
+      ⇑e '' Ω = Ω ∧ Integrable (fun x ↦ log (fderiv ℝ e x).det) μ := by
+  have hu : LipschitzWith (‖ε‖₊ * K) fun x ↦ ε • v x := (lipschitzWith_smul ε).comp hvK
+  obtain ⟨e₀, he₀⟩ := hu.exists_homeomorph_id_add hε
+  have he : ⇑e₀.toMeasurableEquiv = fun x ↦ x + ε • v x := he₀
+  have hdetc : Continuous fun x ↦ (fderiv ℝ (fun y ↦ y + ε • v y) x).det :=
+    ContinuousLinearMap.continuous_det.comp
+      ((contDiff_id.add (hv.const_smul ε)).continuous_fderiv one_ne_zero)
+  refine ⟨e₀.toMeasurableEquiv, he, fun x _ ↦ he ▸
+    (hasFDerivAt_add_smul (hv.differentiable one_ne_zero x)).differentiableAt,
+    he ▸ hu.image_add_eq_of_forall_frontier_eq_zero hε fun y hy ↦ by simp [hv₀ y hy], he ▸ ?_⟩
+  exact (hdetc.continuousOn.log fun x hx ↦ (hdet x hx).ne').integrable_of_ae_mem hΩ hμΩ
+
+/-- **The perturbed Kullback–Leibler divergence is finite near `0`.** Let `π = p · vol|_Ω`, with
+`Ω` compact and `p` continuous and positive on `Ω`, let `v` be a `C¹` Lipschitz vector field
+vanishing on the frontier of `Ω`, and let `μ` be a finite measure with `KL(μ ‖ π) < ∞`. Then
+`KL((I + ε v)#μ ‖ π) < ∞` for every `ε` close enough to `0`. -/
+theorem eventually_klDiv_map_add_smul_ne_top {μ : Measure E} [IsFiniteMeasure μ]
+    (hvK : LipschitzWith K v) (hΩ : IsCompact Ω) (hp : Measurable p) (hpc : ContinuousOn p Ω)
+    (hp₀ : ∀ x ∈ Ω, 0 < p x) (hv : ContDiff ℝ 1 v) (hv₀ : ∀ y ∈ frontier Ω, v y = 0)
+    (hμ : klDiv μ ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞) :
+    ∀ᶠ ε : ℝ in 𝓝 0, klDiv (μ.map fun x ↦ x + ε • v x)
+      ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞ := by
+  filter_upwards [eventually_lt_one_and_half_le_det (K := K) hΩ hv] with ε ⟨hε, hdet⟩
+  have hdet' (x : E) (hx : x ∈ Ω) : 0 < (fderiv ℝ (fun y ↦ y + ε • v y) x).det :=
+    lt_of_lt_of_le (by norm_num) (hdet x hx)
+  obtain ⟨e, he, hed, himage, hdetμ⟩ := exists_measurableEquiv_add_smul hvK hε hΩ hv hv₀ hdet'
+    (ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ)
+  have := klDiv_map_ne_top hΩ hp hpc hp₀ hed himage (he ▸ hdet') hdetμ hμ
+  rwa [he] at this
+
 /-- **The Kullback–Leibler divergence of a perturbed measure.** Let `π = p · vol|_Ω`, with `Ω`
 compact and `p` continuous and positive on `Ω`, let `v` be a `C¹` `K`-Lipschitz vector field
 vanishing on the frontier of `Ω`, and let `μ` be a finite measure with `KL(μ ‖ π) < ∞`. If
@@ -66,22 +129,9 @@ theorem toReal_klDiv_map_add_smul {μ : Measure E} [IsFiniteMeasure μ]
       (klDiv μ ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x))).toReal -
         ∫ x, (log (p (x + ε • v x)) - log (p x) +
           log (fderiv ℝ (fun y ↦ y + ε • v y) x).det) ∂μ := by
-  -- The perturbation `x ↦ x + ε • v x` is a measurable equivalence mapping `Ω` onto `Ω`.
-  have hu : LipschitzWith (‖ε‖₊ * K) fun x ↦ ε • v x := (lipschitzWith_smul ε).comp hvK
-  obtain ⟨e₀, he₀⟩ := hu.exists_homeomorph_id_add hε
-  set e := e₀.toMeasurableEquiv
-  have he : ⇑e = fun x ↦ x + ε • v x := he₀
-  have himage : ⇑e '' Ω = Ω := he ▸
-    hu.image_add_eq_of_forall_frontier_eq_zero hε fun y hy ↦ by simp [hv₀ y hy]
-  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ
-  have hdetc : Continuous fun x ↦ (fderiv ℝ (fun y ↦ y + ε • v y) x).det :=
-    ContinuousLinearMap.continuous_det.comp
-      ((contDiff_id.add (hv.const_smul ε)).continuous_fderiv one_ne_zero)
-  have hdetμ : Integrable (fun x ↦ log (fderiv ℝ (fun y ↦ y + ε • v y) x).det) μ :=
-    (hdetc.continuousOn.log fun x hx ↦ (hdet x hx).ne').integrable_of_ae_mem hΩ hμΩ
-  have h := toReal_klDiv_map_eq (e := e) hΩ hp hpc hp₀
-    (fun x _ ↦ he ▸ (hasFDerivAt_add_smul (hv.differentiable one_ne_zero x)).differentiableAt)
-    himage (he ▸ hdet) (he ▸ hdetμ) hμ
+  obtain ⟨e, he, hed, himage, hdetμ⟩ := exists_measurableEquiv_add_smul hvK hε hΩ hv hv₀ hdet
+    (ae_mem_of_klDiv_ne_top hΩ.measurableSet hμ)
+  have h := toReal_klDiv_map_eq hΩ hp hpc hp₀ hed himage (he ▸ hdet) hdetμ hμ
   simpa only [he] using h
 
 /-- **The first variation of the Kullback–Leibler divergence** (proof of Theorem A.8 of
@@ -126,18 +176,13 @@ theorem hasDerivAt_toReal_klDiv_map_add_smul {μ : Measure E} [IsFiniteMeasure �
   obtain ⟨V, hV⟩ := hΩ.exists_bound_of_continuousOn hvd.continuous.continuousOn
   -- The radius `ε₀` below which `ε ∈ [-1, 1]`, `I + ε v` is a homeomorphism and its Jacobian is at
   -- least `1 / 2` on `Ω`.
-  have hK : ∀ᶠ ε : ℝ in 𝓝 0, ‖ε‖₊ * K < 1 :=
-    (((continuous_nnNorm (E := ℝ)).mul continuous_const).tendsto 0).eventually_lt_const
-      (by simp)
   have hI : ∀ᶠ ε : ℝ in 𝓝 0, ε ∈ Icc (-1 : ℝ) 1 := Icc_mem_nhds (by norm_num) (by norm_num)
-  have hJ₀ : ∀ᶠ ε in 𝓝 0, ∀ A ∈ fderiv ℝ v '' Ω, 1 / 2 ≤ J ε A :=
-    hKD.eventually_forall_of_forall_eventually fun A _ ↦
-      ((hJc.tendsto (0, A)).eventually_const_lt (by norm_num [J])).mono fun _ h ↦ h.le
-  obtain ⟨ε₀, hε₀, hε₀'⟩ := Metric.eventually_nhds_iff_ball.1 (hK.and (hI.and hJ₀))
-  have hεK {ε : ℝ} (hε : ε ∈ Metric.ball (0 : ℝ) ε₀) : ‖ε‖₊ * K < 1 := (hε₀' ε hε).1
+  obtain ⟨ε₀, hε₀, hε₀'⟩ := Metric.eventually_nhds_iff_ball.1
+    ((eventually_lt_one_and_half_le_det (K := K) hΩ hv).and hI)
+  have hεK {ε : ℝ} (hε : ε ∈ Metric.ball (0 : ℝ) ε₀) : ‖ε‖₊ * K < 1 := (hε₀' ε hε).1.1
   have hJ {ε : ℝ} (hε : ε ∈ Metric.ball (0 : ℝ) ε₀) {x : E} (hx : x ∈ Ω) :
       1 / 2 ≤ J ε (fderiv ℝ v x) :=
-    (hε₀' ε hε).2.2 _ (mem_image_of_mem _ hx)
+    hJT ε x ▸ (hε₀' ε hε).1.2 x hx
   -- For small `ε`, the Kullback–Leibler divergence is given by the change of variables.
   set G : ℝ → E → ℝ := fun ε x ↦ log (p (x + ε • v x)) - log (p x) + log (J ε (fderiv ℝ v x))
   set C := (klDiv μ ν).toReal
@@ -178,7 +223,7 @@ theorem hasDerivAt_toReal_klDiv_map_add_smul {μ : Measure E} [IsFiniteMeasure �
     have hT : x + ε • v x ∈ Ω := hvK.add_smul_mem_of_forall_frontier_eq_zero (hεK hε) hv₀ hx
     have hJx := hJ hε hx
     have hdJx : ‖dJ ε (fderiv ℝ v x)‖ ≤ Md :=
-      hMd (ε, fderiv ℝ v x) ⟨(hε₀' ε hε).2.1, mem_image_of_mem _ hx⟩
+      hMd (ε, fderiv ℝ v x) ⟨(hε₀' ε hε).2, mem_image_of_mem _ hx⟩
     have hMd₀ : 0 ≤ Md := (norm_nonneg _).trans hdJx
     have h₁ : ‖s (x + ε • v x) (v x)‖ ≤ S * V := (s _).le_of_opNorm_le_of_le (hS _ hT) (hV x hx)
     have h₂ : ‖dJ ε (fderiv ℝ v x) / J ε (fderiv ℝ v x)‖ ≤ 2 * Md := by

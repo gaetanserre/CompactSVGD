@@ -12,11 +12,14 @@ public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
 
 import CompactSVGD.FeatureMap.VectorField
+import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.Trace
 import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
+import CompactSVGD.ForMathlib.Analysis.ODE.FlowJacobian
 import CompactSVGD.ForMathlib.Analysis.ODE.Global
 import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Flow
 import CompactSVGD.ForMathlib.MeasureTheory.Integral.Map
+import Mathlib.Analysis.ODE.Transform
 
 /-!
 # Trajectories of the vector field of a curve
@@ -37,11 +40,15 @@ Kullback–Leibler divergence along the flow.
 * `SVGD.isHomeomorph_trajectory`, `SVGD.exists_homeomorph_trajectory`: the flow maps are
   homeomorphisms of `ℝᵈ`, and of `Ω` when `Φ` vanishes on the frontier of `Ω`.
 * `SVGD.trajectory_mem`: if `Φ` vanishes on the frontier of `Ω`, trajectories stay in `Ω`.
+* `SVGD.trajectory_comp_add`: shifting the time origin.
 * `SVGD.dist_trajectory_trajectory_le_of_dist_le`: trajectories depend continuously on `m`.
 * `SVGD.exists_dist_integral_map_trajectory_lt`: equicontinuity of `t ↦ ∫ F d(Tₜ)#ν`, uniformly in
   the curve.
-* `SVGD.hasDerivAt_toReal_klDiv_map_trajectory`: the derivative of the Kullback–Leibler divergence
-  along the flow.
+* `SVGD.differentiable_trajectory_apply`, `SVGD.det_fderiv_trajectory_pos`,
+  `SVGD.hasDerivAt_log_det_fderiv_trajectory`, `SVGD.abs_log_det_fderiv_trajectory_le`: the
+  Jacobian of the flow maps.
+* `SVGD.klDiv_map_trajectory_ne_top`, `SVGD.hasDerivAt_toReal_klDiv_map_trajectory`: the
+  Kullback–Leibler divergence stays finite along the flow, and its derivative.
 -/
 
 @[expose] public section
@@ -126,6 +133,21 @@ theorem ae_map_trajectory_mem {Ω : Set (EuclideanSpace ℝ (Fin d))} (hΩ : Mea
     (hμ : ∀ᵐ x ∂μ, x ∈ Ω) (s t : ℝ) : ∀ᵐ y ∂μ.map (trajectory Φ m s · t), y ∈ Ω :=
   (ae_map_iff (continuous_trajectory_apply hm hmB hΦK s t).aemeasurable hΩ).2
     (hμ.mono fun _ hx ↦ trajectory_mem hm hmB hΦK hΦΩ hx t)
+
+/-- **Time shift.** The trajectories of `m` from time `s` are those of `r ↦ m (r + s)` from time
+`0`, shifted by `s`. -/
+theorem trajectory_comp_add (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (r : ℝ) :
+    trajectory Φ (fun r ↦ m (r + s)) 0 x r = trajectory Φ m s x (r + s) := by
+  have hm' : Continuous fun r ↦ m (r + s) := hm.comp (continuous_id.add continuous_const)
+  have h := IsIntegralCurve.comp_add (ODE.isIntegralCurve_globalSolution
+    (continuous_toVectorField_apply hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s x) s
+  have h₀ := h.eq_globalSolution (continuous_toVectorField_apply hm')
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB (t + s))) 0
+  simp only [Function.comp_def, zero_add] at h₀
+  rw [ODE.globalSolution_self (continuous_toVectorField_apply hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))] at h₀
+  exact (congrFun h₀ r).symm
 
 /-- Two curves that agree between times `s` and `t` have the same trajectories from time `s` to
 time `t`. -/
@@ -217,6 +239,56 @@ theorem exists_dist_integral_map_trajectory_lt (hΩ : IsCompact Ω) (hΦK : Lips
 
 end Integral
 
+/-! ### The Jacobian of the flow -/
+
+section Jacobian
+
+variable (hΦ : ContDiff ℝ 1 Φ) (hΦK : LipschitzWith K Φ) (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
+include hΦ hΦK hm hmB
+
+/-- The flow maps of `m` are differentiable. -/
+theorem differentiable_trajectory_apply (t : ℝ) : Differentiable ℝ (trajectory Φ m 0 · t) :=
+  ODE.differentiable_flow
+    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_uncurry_pairing_comp_fderiv hΦ hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) t
+
+/-- The Jacobian determinant of the flow maps of `m` is positive. -/
+theorem det_fderiv_trajectory_pos (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    0 < (fderiv ℝ (trajectory Φ m 0 · t) x).det :=
+  ODE.det_fderiv_flow_pos
+    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_uncurry_pairing_comp_fderiv hΦ hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
+
+/-- **Liouville's formula** along the flow of `m`: `∂ₜ log Jₜ(x) = div vₜ (Tₜ x)`, where `Jₜ` is the
+Jacobian determinant of the flow map `Tₜ` and `vₜ` is the vector field of `m t`. -/
+theorem hasDerivAt_log_det_fderiv_trajectory (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    HasDerivAt (fun t ↦ Real.log (fderiv ℝ (trajectory Φ m 0 · t) x).det)
+      (divergence ℝ (toVectorField Φ (m t)) (trajectory Φ m 0 x t)) t :=
+  ODE.hasDerivAt_log_det_fderiv_flow
+    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_uncurry_pairing_comp_fderiv hΦ hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
+
+/-- The logarithm of the Jacobian determinant of the flow maps of `m` grows at most linearly:
+`|log Jₜ(x)| ≤ d B K |t|`. -/
+theorem abs_log_det_fderiv_trajectory_le (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    |Real.log (fderiv ℝ (trajectory Φ m 0 · t) x).det| ≤ d * (B * K) * |t| := by
+  have h := ODE.abs_log_det_fderiv_flow_le
+    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_uncurry_pairing_comp_fderiv hΦ hm)
+    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
+  rw [sub_zero, NNReal.coe_mul] at h
+  refine h.trans (by gcongr; simpa using
+    ContinuousLinearMap.norm_traceCLM_le (E := EuclideanSpace ℝ (Fin d)))
+
+end Jacobian
+
 /-! ### The Kullback–Leibler divergence along the trajectories -/
 
 section KullbackLeibler
@@ -229,6 +301,19 @@ variable {s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ 
   (hmB : ∀ t, ‖m t‖ ≤ B)
   (hKL : klDiv μ ((volume.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) ≠ ∞)
 include hΩ hp hpc hp₀ hΦ hΦK hΦΩ hm hmB hKL
+
+/-- **The Kullback–Leibler divergence stays finite along the flow of `m`.** Let `π = p · λ|_Ω`,
+with `Ω` compact and `p` continuous and positive on `Ω`. If `KL(μ ‖ π) < ∞`, then
+`KL((Tₜ)#μ ‖ π) < ∞` at every time, where `Tₜ` is the flow of `m`. -/
+theorem klDiv_map_trajectory_ne_top (t : ℝ) :
+    klDiv (μ.map (trajectory Φ m 0 · t))
+      ((volume.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) ≠ ∞ :=
+  InformationTheory.klDiv_map_flow_ne_top hΩ hp hpc hp₀
+    (continuous_toVectorField_apply hm) (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_uncurry_pairing_comp_fderiv hΦ hm)
+    (fun _ y hy ↦ toVectorField_eq_zero_of_eq_zero (hΦΩ y hy))
+    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) hKL t
 
 /-- **The dissipation of the Kullback–Leibler divergence along the flow of `m`.** Let
 `π = p · λ|_Ω`, where `log p` has a continuous derivative `s` on `Ω`. The map `t ↦ KL(μₜ ‖ π)`,
