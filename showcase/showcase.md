@@ -166,9 +166,9 @@ The kernel is $k(x, y) = \langle \Phi(x), \Phi(y) \rangle$, and its RKHS is repr
 $$f_\Phi(y) = \big(\langle f_1, \Phi(y) \rangle, \dots, \langle f_d, \Phi(y) \rangle\big),$$
 where $\Phi(y)$ plays the role of $k(\cdot, y)$. Thus, the reproducing property $f_i(y) = \langle f_i, k(\cdot, y) \rangle_{H_0}$ holds by definition. Its derivative form $\partial_i f_i(y) = \langle f_i, \partial_i k(\cdot, y) \rangle_{H_0}$ follows from the differentiability of $\Phi$. Together they give $\mathcal{A}_\pi f(x) = \langle f, \xi_x \rangle_{\mathcal{H}}$ at every $x$ where $\Phi$ is differentiable, for the element $\xi_x \in \mathcal{H}$ defined below (see the [reproducing property](#SVGD.reproducing_property)).
 
-Nothing else is used about RKHS. The formalization needs neither the uniqueness of the RKHS, nor the integral positive definiteness of $k$, nor the density of $H_0$ in $L^2$. Every RKHS fits this setting, with its canonical feature map $x \mapsto k(\cdot, x)$. Conversely, $\mathcal{H}$ may contain elements whose vector field vanishes, namely those whose components are orthogonal to every $\Phi(y)$ and $\partial_i \Phi(y)$. They play no role in $\mathcal{A}_\pi f$, in the KSD, in $\varphi^*_\mu$ or in Stein-universality (Definition A.9).
+Nothing else is used about RKHS. The formalization needs neither the uniqueness of the RKHS, nor the integral positive definiteness of $k$, nor the density of $H_0$ in $L^2$. Every RKHS fits this setting, with its canonical feature map $x \mapsto k(\cdot, x)$. Conversely, $\mathcal{H}$ may contain elements whose vector field vanishes, namely those whose components are orthogonal to every $\Phi(y)$ and $\partial_i \Phi(y)$. They play no role in $\mathcal{A}_\pi f$, in the KSD, in $\phi^*_\mu$ or in Stein-universality (Definition A.9).
 
-The update direction $\varphi^*_\mu$ of SVGD is the mean under $\mu$ of an element $\xi_x$ of $\mathcal{H}$ that does not depend on $\mu$.
+The update direction $\phi^*_\mu$ of SVGD is the mean under $\mu$ of an element $\xi_x$ of $\mathcal{H}$ that does not depend on $\mu$.
 
 {{SVGD.steinFeature | Definition}}
 
@@ -182,8 +182,8 @@ where $D\Phi(x) = 0$ if $\Phi$ is not differentiable at $x$. When $s = \nabla \l
 
 ```informal SVGD.direction | The update direction
 Let $\Phi : \mathbb{R}^d \to H_0$, $s : \mathbb{R}^d \to (\mathbb{R}^d)^*$ and $\mu$ a measure on $\mathbb{R}^d$. The update direction of SVGD is the Bochner integral
-$$\varphi^*_\mu = \int \xi_x \, \mathrm{d}\mu(x) \in \mathcal{H}.$$
-By convention, $\varphi^*_\mu = 0$ if $x \mapsto \xi_x$ is not $\mu$-integrable, or if $\mathcal{H}$ is not complete. The measure $\mu$ is arbitrary. It need not have a density, nor be a probability measure.
+$$\phi^*_\mu = \int \xi_x \, \mathrm{d}\mu(x) \in \mathcal{H}.$$
+By convention, $\phi^*_\mu = 0$ if $x \mapsto \xi_x$ is not $\mu$-integrable, or if $\mathcal{H}$ is not complete. The measure $\mu$ is arbitrary. It need not have a density, nor be a probability measure.
 ```
 
 The KSD is the largest violation of Stein's identity (Lemma A.3) over the closed unit ball of $\mathcal{H}$. It depends on $\pi$ only through its score $s$.
@@ -265,33 +265,33 @@ $$\int \|\xi_x\|_{\mathcal{H}} \, \mathrm{d}\nu(x) < \infty.$$
 By Lemma A.6 (i), $x \mapsto \xi_x$ is continuous on the compact set $\Omega$. A function continuous on a compact set is integrable for every measure carried by this set and finite on compact sets. Indeed, such a measure is equal to its restriction to the set, and a function continuous on a compact set is integrable on it. The finite measure $\nu$ is finite on compact sets and carried by $\Omega$, which concludes the proof.
 ```
 
-Thus, under the hypotheses of Lemma A.6 (iii) and when $H_0$ is a Hilbert space, $\varphi^*_\nu = \int \xi_x \, \mathrm{d}\nu(x)$ is the Bochner integral of an integrable function, and not the value $0$ given by convention.
+Thus, under the hypotheses of Lemma A.6 (iii) and when $H_0$ is a Hilbert space, $\phi^*_\nu = \int \xi_x \, \mathrm{d}\nu(x)$ is the Bochner integral of an integrable function, and not the value $0$ given by convention.
 
 {{SVGD.xi_regularity_norm_direction_le | Lemma A.6 (iv)}}
 
 ```informal SVGD.xi_regularity_norm_direction_le | Regularity of $\xi$
 Let $\Omega \subseteq \mathbb{R}^d$, $\Phi : \mathbb{R}^d \to H_0$ and $s : \mathbb{R}^d \to (\mathbb{R}^d)^*$. Let $B \in \mathbb{R}$ such that $\|\xi_x\|_{\mathcal{H}} \le B$ for every $x \in \Omega$. Let $\nu \in \mathcal{P}(\Omega)$, i.e. $\nu$ is a probability measure on $\mathbb{R}^d$ such that $x \in \Omega$ for $\nu$-almost every $x$. Then,
-$$\|\varphi^*_\nu\|_{\mathcal{H}} \le B.$$
+$$\|\phi^*_\nu\|_{\mathcal{H}} \le B.$$
 ```
 
 ```proof SVGD.xi_regularity_norm_direction_le
 As $x \in \Omega$ for $\nu$-almost every $x$, we have that $\|\xi_x\|_{\mathcal{H}} \le B$ for $\nu$-almost every $x$. For a finite measure, if the norm of the integrand is at most a constant almost everywhere, then the norm of its Bochner integral is at most this constant times the total mass. This bound needs no integrability. Thus,
-$$\|\varphi^*_\nu\|_{\mathcal{H}} = \left\| \int \xi_x \, \mathrm{d}\nu(x) \right\|_{\mathcal{H}} \le B \, \nu(\mathbb{R}^d) = B.$$
-In particular, the bound holds when $\varphi^*_\nu = 0$ by convention. Indeed, $\nu \neq 0$ and $B \ge \|\xi_x\|_{\mathcal{H}} \ge 0$ for $\nu$-almost every $x$, so that $B \ge 0$. This concludes the proof.
+$$\|\phi^*_\nu\|_{\mathcal{H}} = \left\| \int \xi_x \, \mathrm{d}\nu(x) \right\|_{\mathcal{H}} \le B \, \nu(\mathbb{R}^d) = B.$$
+In particular, the bound holds when $\phi^*_\nu = 0$ by convention. Indeed, $\nu \neq 0$ and $B \ge \|\xi_x\|_{\mathcal{H}} \ge 0$ for $\nu$-almost every $x$, so that $B \ge 0$. This concludes the proof.
 ```
 
 {{SVGD.xi_regularity_norm_direction_apply_le | Lemma A.6 (v)}}
 
 ```informal SVGD.xi_regularity_norm_direction_apply_le | Regularity of $\xi$
 Let $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$, $C$ satisfy the standing assumptions. Let $B \ge 0$ such that $\|\xi_x\|_{\mathcal{H}} \le B$ for every $x \in \Omega$. Let $\nu \in \mathcal{P}(\Omega)$. Then,
-$$\forall y \in \mathbb{R}^d, \ \big\|(\varphi^*_\nu)_\Phi(y)\big\|_2 \le B\, C.$$
+$$\forall y \in \mathbb{R}^d, \ \big\|(\phi^*_\nu)_\Phi(y)\big\|_2 \le B\, C.$$
 ```
 
 ```proof SVGD.xi_regularity_norm_direction_apply_le
-Let $y \in \mathbb{R}^d$. By Lemma A.6 (iv), $\|\varphi^*_\nu\|_{\mathcal{H}} \le B$. By the standing assumptions, $\|\Phi(y)\|_{H_0} \le C$. Let $h \in \mathcal{H}$ and $u \in H_0$, and let $P_h(u) = \big(\langle h_i, u \rangle_{H_0}\big)_{1 \le i \le d} \in \mathbb{R}^d$, so that $h_\Phi = P_h \circ \Phi$. By the Cauchy–Schwarz inequality in $H_0$, we have that
+Let $y \in \mathbb{R}^d$. By Lemma A.6 (iv), $\|\phi^*_\nu\|_{\mathcal{H}} \le B$. By the standing assumptions, $\|\Phi(y)\|_{H_0} \le C$. Let $h \in \mathcal{H}$ and $u \in H_0$, and let $P_h(u) = \big(\langle h_i, u \rangle_{H_0}\big)_{1 \le i \le d} \in \mathbb{R}^d$, so that $h_\Phi = P_h \circ \Phi$. By the Cauchy–Schwarz inequality in $H_0$, we have that
 $$\|P_h(u)\|_2^2 = \sum_{i=1}^d \langle h_i, u \rangle_{H_0}^2 \le \sum_{i=1}^d \|h_i\|_{H_0}^2 \|u\|_{H_0}^2 = \|h\|_{\mathcal{H}}^2 \|u\|_{H_0}^2.$$
-Taking square roots, $\|P_h(u)\|_2 \le \|h\|_{\mathcal{H}} \, \|u\|_{H_0}$. We apply this to $h = \varphi^*_\nu$ and $u = \Phi(y)$. As $B \ge 0$, we have that
-$$\big\|(\varphi^*_\nu)_\Phi(y)\big\|_2 = \big\|P_{\varphi^*_\nu}(\Phi(y))\big\|_2 \le \|\varphi^*_\nu\|_{\mathcal{H}} \, \|\Phi(y)\|_{H_0} \le B\, C,$$
+Taking square roots, $\|P_h(u)\|_2 \le \|h\|_{\mathcal{H}} \, \|u\|_{H_0}$. We apply this to $h = \phi^*_\nu$ and $u = \Phi(y)$. As $B \ge 0$, we have that
+$$\big\|(\phi^*_\nu)_\Phi(y)\big\|_2 = \big\|P_{\phi^*_\nu}(\Phi(y))\big\|_2 \le \|\phi^*_\nu\|_{\mathcal{H}} \, \|\Phi(y)\|_{H_0} \le B\, C,$$
 which concludes the proof.
 ```
 
@@ -309,20 +309,20 @@ $$\forall x \in \Omega, \ \mathcal{A}_\pi f(x) = \langle f, \xi_x \rangle_{\math
 By Lemma A.6 (i), $x \mapsto \xi_x$ is continuous on $\Omega$. As the inner product is continuous, $x \mapsto \langle f, \xi_x \rangle_{\mathcal{H}}$ is continuous on $\Omega$. Thus, $\mathcal{A}_\pi f$ is continuous on $\Omega$, as it coincides with this function on $\Omega$, which concludes the proof.
 ```
 
-The supremum in the KSD is attained along the update direction $\varphi^*_\mu$. Thus, the discrepancy is the squared norm of this direction. Theorem A.7 is made of four separate results. They all take the standing assumptions, a Hilbert space $H_0$ and a measure $\mu \in \mathcal{P}(\Omega)$.
+The supremum in the KSD is attained along the update direction $\phi^*_\mu$. Thus, the discrepancy is the squared norm of this direction. Theorem A.7 is made of four separate results. They all take the standing assumptions, a Hilbert space $H_0$ and a measure $\mu \in \mathcal{P}(\Omega)$.
 
 {{SVGD.steepest_trajectory_integral | Theorem A.7 (i)}}
 
 ```informal SVGD.steepest_trajectory_integral
 Let $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$, $C$ satisfy the standing assumptions. Let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$. Then,
-$$\forall f \in \mathcal{H}, \ \int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) = \langle f, \varphi^*_\mu \rangle_{\mathcal{H}}.$$
+$$\forall f \in \mathcal{H}, \ \int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) = \langle f, \phi^*_\mu \rangle_{\mathcal{H}}.$$
 ```
 
 ```proof SVGD.steepest_trajectory_integral
 Let $f \in \mathcal{H}$. As $\mu$ is finite and carried by $\Omega$, $x \mapsto \xi_x$ is $\mu$-integrable by Lemma A.6 (iii). As $H_0$ is complete, so is $\mathcal{H}$. Thus, the continuous linear form $\langle f, \cdot \rangle_{\mathcal{H}}$ commutes with the Bochner integral, and
-$$\langle f, \varphi^*_\mu \rangle_{\mathcal{H}} = \left\langle f, \int \xi_x \, \mathrm{d}\mu(x) \right\rangle_{\mathcal{H}} = \int \langle f, \xi_x \rangle_{\mathcal{H}} \, \mathrm{d}\mu(x).$$
+$$\langle f, \phi^*_\mu \rangle_{\mathcal{H}} = \left\langle f, \int \xi_x \, \mathrm{d}\mu(x) \right\rangle_{\mathcal{H}} = \int \langle f, \xi_x \rangle_{\mathcal{H}} \, \mathrm{d}\mu(x).$$
 By the standing assumptions, $\Phi$ is $C^1$, hence differentiable at every $x \in \mathbb{R}^d$. By the [reproducing property](#SVGD.reproducing_property), $\mathcal{A}_\pi f(x) = \langle f, \xi_x \rangle_{\mathcal{H}}$ for every $x \in \mathbb{R}^d$. Thus, the two integrands are equal, and
-$$\int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) = \int \langle f, \xi_x \rangle_{\mathcal{H}} \, \mathrm{d}\mu(x) = \langle f, \varphi^*_\mu \rangle_{\mathcal{H}},$$
+$$\int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) = \int \langle f, \xi_x \rangle_{\mathcal{H}} \, \mathrm{d}\mu(x) = \langle f, \phi^*_\mu \rangle_{\mathcal{H}},$$
 which concludes the proof.
 ```
 
@@ -330,36 +330,36 @@ which concludes the proof.
 
 ```informal SVGD.steepest_trajectory_isMaxOn
 Let $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$, $C$ satisfy the standing assumptions. Let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$. Then,
-$$\forall f \in \mathcal{H}, \ \|f\|_{\mathcal{H}} \le 1 \implies \int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) \le \int \mathcal{A}_\pi \big( \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu \big)(x) \, \mathrm{d}\mu(x),$$
-with the convention $0^{-1} = 0$. Thus, $\|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu = 0$ if $\varphi^*_\mu = 0$.
+$$\forall f \in \mathcal{H}, \ \|f\|_{\mathcal{H}} \le 1 \implies \int \mathcal{A}_\pi f(x) \, \mathrm{d}\mu(x) \le \int \mathcal{A}_\pi \big( \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu \big)(x) \, \mathrm{d}\mu(x),$$
+with the convention $0^{-1} = 0$. Thus, $\|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu = 0$ if $\phi^*_\mu = 0$.
 ```
 
 ```proof SVGD.steepest_trajectory_isMaxOn
-By Theorem A.7 (i), applied to $f$ and to $\|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu$, it is sufficient to show that
-$$\forall h \in \mathcal{H}, \ \|h\|_{\mathcal{H}} \le 1 \implies \langle h, \varphi^*_\mu \rangle_{\mathcal{H}} \le \big\langle \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu, \varphi^*_\mu \big\rangle_{\mathcal{H}}.$$
-This holds for every vector of a real inner product space in place of $\varphi^*_\mu$. Let $h \in \mathcal{H}$ with $\|h\|_{\mathcal{H}} \le 1$. By the Cauchy–Schwarz inequality,
-$$\langle h, \varphi^*_\mu \rangle_{\mathcal{H}} \le \|h\|_{\mathcal{H}} \, \|\varphi^*_\mu\|_{\mathcal{H}} \le \|\varphi^*_\mu\|_{\mathcal{H}}.$$
-We also have that $\langle \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}$. If $\varphi^*_\mu = 0$, both sides are $0$. Otherwise,
-$$\big\langle \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu, \varphi^*_\mu \big\rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \|\varphi^*_\mu\|_{\mathcal{H}}^2 = \|\varphi^*_\mu\|_{\mathcal{H}},$$
+By Theorem A.7 (i), applied to $f$ and to $\|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu$, it is sufficient to show that
+$$\forall h \in \mathcal{H}, \ \|h\|_{\mathcal{H}} \le 1 \implies \langle h, \phi^*_\mu \rangle_{\mathcal{H}} \le \big\langle \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu, \phi^*_\mu \big\rangle_{\mathcal{H}}.$$
+This holds for every vector of a real inner product space in place of $\phi^*_\mu$. Let $h \in \mathcal{H}$ with $\|h\|_{\mathcal{H}} \le 1$. By the Cauchy–Schwarz inequality,
+$$\langle h, \phi^*_\mu \rangle_{\mathcal{H}} \le \|h\|_{\mathcal{H}} \, \|\phi^*_\mu\|_{\mathcal{H}} \le \|\phi^*_\mu\|_{\mathcal{H}}.$$
+We also have that $\langle \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}$. If $\phi^*_\mu = 0$, both sides are $0$. Otherwise,
+$$\big\langle \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu, \phi^*_\mu \big\rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \|\phi^*_\mu\|_{\mathcal{H}}^2 = \|\phi^*_\mu\|_{\mathcal{H}},$$
 which concludes the proof.
 ```
 
-The statement does not say that $\|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu$ lies in the closed unit ball. It does, as its norm is $0$ or $1$. This fact is used in the proof of Theorem A.7 (iii).
+The statement does not say that $\|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu$ lies in the closed unit ball. It does, as its norm is $0$ or $1$. This fact is used in the proof of Theorem A.7 (iii).
 
 {{SVGD.steepest_trajectory_ksd | Theorem A.7 (iii)}}
 
 ```informal SVGD.steepest_trajectory_ksd
 Let $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$, $C$ satisfy the standing assumptions. Let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$. Then,
-$$\mathfrak{K}(\mu \mid \pi) = \|\varphi^*_\mu\|_{\mathcal{H}}^2.$$
+$$\mathfrak{K}(\mu \mid \pi) = \|\phi^*_\mu\|_{\mathcal{H}}^2.$$
 ```
 
 ```proof SVGD.steepest_trajectory_ksd
 By Theorem A.7 (i), we have that
-$$\mathfrak{K}(\mu \mid \pi) = \sup_{f \in \mathcal{H}, \ \|f\|_{\mathcal{H}} \le 1} \langle f, \varphi^*_\mu \rangle_{\mathcal{H}}^2.$$
-We show that the real supremum of $\langle h, \varphi^*_\mu \rangle_{\mathcal{H}}^2$ over the closed unit ball is $\|\varphi^*_\mu\|_{\mathcal{H}}^2$. Let $h \in \mathcal{H}$ with $\|h\|_{\mathcal{H}} \le 1$. By the Cauchy–Schwarz inequality, $|\langle h, \varphi^*_\mu \rangle_{\mathcal{H}}| \le \|h\|_{\mathcal{H}} \, \|\varphi^*_\mu\|_{\mathcal{H}} \le \|\varphi^*_\mu\|_{\mathcal{H}}$. Hence,
-$$\langle h, \varphi^*_\mu \rangle_{\mathcal{H}}^2 \le \|\varphi^*_\mu\|_{\mathcal{H}}^2.$$
-The family is thus bounded above by $\|\varphi^*_\mu\|_{\mathcal{H}}^2$. It is nonempty, as $0$ lies in the closed unit ball. Therefore, its real supremum is its least upper bound, which is at most $\|\varphi^*_\mu\|_{\mathcal{H}}^2$. Conversely, $\|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu$ lies in the closed unit ball, as its norm is $0$ or $1$. As in the proof of Theorem A.7 (ii), $\langle \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}$. Thus, the supremum is at least
-$$\big\langle \|\varphi^*_\mu\|_{\mathcal{H}}^{-1} \varphi^*_\mu, \varphi^*_\mu \big\rangle_{\mathcal{H}}^2 = \|\varphi^*_\mu\|_{\mathcal{H}}^2,$$
+$$\mathfrak{K}(\mu \mid \pi) = \sup_{f \in \mathcal{H}, \ \|f\|_{\mathcal{H}} \le 1} \langle f, \phi^*_\mu \rangle_{\mathcal{H}}^2.$$
+We show that the real supremum of $\langle h, \phi^*_\mu \rangle_{\mathcal{H}}^2$ over the closed unit ball is $\|\phi^*_\mu\|_{\mathcal{H}}^2$. Let $h \in \mathcal{H}$ with $\|h\|_{\mathcal{H}} \le 1$. By the Cauchy–Schwarz inequality, $|\langle h, \phi^*_\mu \rangle_{\mathcal{H}}| \le \|h\|_{\mathcal{H}} \, \|\phi^*_\mu\|_{\mathcal{H}} \le \|\phi^*_\mu\|_{\mathcal{H}}$. Hence,
+$$\langle h, \phi^*_\mu \rangle_{\mathcal{H}}^2 \le \|\phi^*_\mu\|_{\mathcal{H}}^2.$$
+The family is thus bounded above by $\|\phi^*_\mu\|_{\mathcal{H}}^2$. It is nonempty, as $0$ lies in the closed unit ball. Therefore, its real supremum is its least upper bound, which is at most $\|\phi^*_\mu\|_{\mathcal{H}}^2$. Conversely, $\|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu$ lies in the closed unit ball, as its norm is $0$ or $1$. As in the proof of Theorem A.7 (ii), $\langle \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}$. Thus, the supremum is at least
+$$\big\langle \|\phi^*_\mu\|_{\mathcal{H}}^{-1} \phi^*_\mu, \phi^*_\mu \big\rangle_{\mathcal{H}}^2 = \|\phi^*_\mu\|_{\mathcal{H}}^2,$$
 which concludes the proof.
 ```
 
@@ -367,12 +367,12 @@ which concludes the proof.
 
 ```informal SVGD.steepest_trajectory_ksd_eq_integral
 Let $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$, $C$ satisfy the standing assumptions. Let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$. Then,
-$$\mathfrak{K}(\mu \mid \pi) = \int \mathcal{A}_\pi \varphi^*_\mu(x) \, \mathrm{d}\mu(x).$$
+$$\mathfrak{K}(\mu \mid \pi) = \int \mathcal{A}_\pi \phi^*_\mu(x) \, \mathrm{d}\mu(x).$$
 ```
 
 ```proof SVGD.steepest_trajectory_ksd_eq_integral
-By Theorem A.7 (iii), then Theorem A.7 (i) with $f = \varphi^*_\mu$, we have that
-$$\mathfrak{K}(\mu \mid \pi) = \|\varphi^*_\mu\|_{\mathcal{H}}^2 = \langle \varphi^*_\mu, \varphi^*_\mu \rangle_{\mathcal{H}} = \int \mathcal{A}_\pi \varphi^*_\mu(x) \, \mathrm{d}\mu(x),$$
+By Theorem A.7 (iii), then Theorem A.7 (i) with $f = \phi^*_\mu$, we have that
+$$\mathfrak{K}(\mu \mid \pi) = \|\phi^*_\mu\|_{\mathcal{H}}^2 = \langle \phi^*_\mu, \phi^*_\mu \rangle_{\mathcal{H}} = \int \mathcal{A}_\pi \phi^*_\mu(x) \, \mathrm{d}\mu(x),$$
 which concludes the proof.
 ```
 
@@ -381,8 +381,8 @@ which concludes the proof.
 SVGD moves each particle $x$ to $x + \varepsilon f_\Phi(x)$, for a small step $\varepsilon$ and some
 $f \in \mathcal{H}$. The first variation of the Kullback–Leibler divergence to $\pi$ measures the
 effect of this move. Theorem A.8 shows that it is the linear form
-$f \mapsto -\langle f, \varphi^*_\mu \rangle_{\mathcal{H}}$. Thus, $\varphi^*_\mu$ is the direction of
-steepest descent in the unit ball of $\mathcal{H}$, and the slope along $\varphi^*_\mu$ is
+$f \mapsto -\langle f, \phi^*_\mu \rangle_{\mathcal{H}}$. Thus, $\phi^*_\mu$ is the direction of
+steepest descent in the unit ball of $\mathcal{H}$, and the slope along $\phi^*_\mu$ is
 $-\mathfrak{K}(\mu \mid \pi)$.
 
 {{SVGD.klFirstVariation | Definition}}
@@ -420,7 +420,7 @@ $f \in \mathcal{H}$. For $\varepsilon \in \mathbb{R}$, let
 $g_f(\varepsilon) = \mathrm{KL}\big((I_d + \varepsilon f_\Phi)_\#\mu \,\|\, \pi\big)$ if this divergence
 is finite, and $g_f(\varepsilon) = 0$ otherwise. Then, $g_f : \mathbb{R} \to \mathbb{R}$ is
 differentiable at $0$ and
-$$g_f'(0) = -\langle f, \varphi^*_\mu \rangle_{\mathcal{H}}.$$
+$$g_f'(0) = -\langle f, \phi^*_\mu \rangle_{\mathcal{H}}.$$
 ```
 
 ```proof SVGD.kl_steepest_descent_hasDerivAt
@@ -500,7 +500,7 @@ field $f_\Phi$ is $\|f\|_{\mathcal{H}} K$-Lipschitz, as $\Phi$ is $K$-Lipschitz.
 linear and $\Phi$ of class $C^1$. It vanishes on $\partial \Omega$, as $\Phi$ does. Thus, $g_f$ is differentiable at $0$ and
 $$g_f'(0) = -\int \big( s(x)(f_\Phi(x)) + \operatorname{div} f_\Phi(x) \big) \, d\mu(x) = -\mathbb{E}_{x \sim \mu}[\mathcal{A}_\pi f(x)].$$
 As $\mu \in \mathcal{P}(\Omega)$ and $H_0$ is a Hilbert space, [Theorem A.7 (i)](#SVGD.steepest_trajectory_integral) gives
-$\mathbb{E}_{x \sim \mu}[\mathcal{A}_\pi f(x)] = \langle f, \varphi^*_\mu \rangle_{\mathcal{H}}$, which
+$\mathbb{E}_{x \sim \mu}[\mathcal{A}_\pi f(x)] = \langle f, \phi^*_\mu \rangle_{\mathcal{H}}$, which
 concludes the proof.
 ```
 
@@ -512,28 +512,28 @@ Thus, the first variation of the Definition is a linear form in $f$.
 Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, and let $H_0$ be a Hilbert space.
 Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\, \pi) < \infty$, and let
 $f \in \mathcal{H}$. Then,
-$$\nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(f)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\langle f, \varphi^*_\mu \rangle_{\mathcal{H}},$$
+$$\nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(f)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\langle f, \phi^*_\mu \rangle_{\mathcal{H}},$$
 where $T_\varepsilon(f) = I_d + \varepsilon f_\Phi$.
 ```
 
 ```proof SVGD.kl_steepest_descent_eq_inner
 By Theorem A.8 (i), $g_f$ is differentiable at $0$ with
-$g_f'(0) = -\langle f, \varphi^*_\mu \rangle_{\mathcal{H}}$. The first variation is $g_f'(0)$ by
+$g_f'(0) = -\langle f, \phi^*_\mu \rangle_{\mathcal{H}}$. The first variation is $g_f'(0)$ by
 definition, and the convention for non-differentiable maps does not apply, which concludes the
 proof.
 ```
 
 On the unit ball of $\mathcal{H}$, this linear form is minimized at
-$\varphi^*_\mu / \|\varphi^*_\mu\|_{\mathcal{H}}$. The minimizer is unique when $\varphi^*_\mu \neq 0$.
-Together, (iii) and (iv) give the $\arg\min$ of [Serre2025] when $\varphi^*_\mu \neq 0$.
+$\phi^*_\mu / \|\phi^*_\mu\|_{\mathcal{H}}$. The minimizer is unique when $\phi^*_\mu \neq 0$.
+Together, (iii) and (iv) give the $\arg\min$ of [Serre2025] when $\phi^*_\mu \neq 0$.
 
 {{SVGD.kl_steepest_descent_isMinOn | Theorem A.8 (iii)}}
 
 ```informal SVGD.kl_steepest_descent_isMinOn
 Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, and let $H_0$ be a Hilbert space.
 Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let
-$u = \varphi^*_\mu / \|\varphi^*_\mu\|_{\mathcal{H}}$, with the convention $u = 0$ if
-$\varphi^*_\mu = 0$. Then, for every $f \in \mathcal{H}$ with $\|f\|_{\mathcal{H}} \le 1$,
+$u = \phi^*_\mu / \|\phi^*_\mu\|_{\mathcal{H}}$, with the convention $u = 0$ if
+$\phi^*_\mu = 0$. Then, for every $f \in \mathcal{H}$ with $\|f\|_{\mathcal{H}} \le 1$,
 $$\nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(u)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} \le \nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(f)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0},$$
 where $T_\varepsilon(h) = I_d + \varepsilon h_\Phi$ for $h \in \mathcal{H}$.
 ```
@@ -541,13 +541,13 @@ where $T_\varepsilon(h) = I_d + \varepsilon h_\Phi$ for $h \in \mathcal{H}$.
 ```proof SVGD.kl_steepest_descent_isMinOn
 Let $f \in \mathcal{H}$ with $\|f\|_{\mathcal{H}} \le 1$. By Theorem A.8 (ii), applied to $u$ and to
 $f$, the claim reads
-$$-\langle u, \varphi^*_\mu \rangle_{\mathcal{H}} \le -\langle f, \varphi^*_\mu \rangle_{\mathcal{H}}.$$
-We have that $\langle u, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}$. Indeed, if $\varphi^*_\mu \neq 0$, then
-$\langle u, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}^2 / \|\varphi^*_\mu\|_{\mathcal{H}}$.
-If $\varphi^*_\mu = 0$, both sides vanish. Thus, it is sufficient to show that
-$\langle f, \varphi^*_\mu \rangle_{\mathcal{H}} \le \|\varphi^*_\mu\|_{\mathcal{H}}$. By the
+$$-\langle u, \phi^*_\mu \rangle_{\mathcal{H}} \le -\langle f, \phi^*_\mu \rangle_{\mathcal{H}}.$$
+We have that $\langle u, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}$. Indeed, if $\phi^*_\mu \neq 0$, then
+$\langle u, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}^2 / \|\phi^*_\mu\|_{\mathcal{H}}$.
+If $\phi^*_\mu = 0$, both sides vanish. Thus, it is sufficient to show that
+$\langle f, \phi^*_\mu \rangle_{\mathcal{H}} \le \|\phi^*_\mu\|_{\mathcal{H}}$. By the
 Cauchy–Schwarz inequality and $\|f\|_{\mathcal{H}} \le 1$,
-$$\langle f, \varphi^*_\mu \rangle_{\mathcal{H}} \le \|f\|_{\mathcal{H}} \, \|\varphi^*_\mu\|_{\mathcal{H}} \le \|\varphi^*_\mu\|_{\mathcal{H}},$$
+$$\langle f, \phi^*_\mu \rangle_{\mathcal{H}} \le \|f\|_{\mathcal{H}} \, \|\phi^*_\mu\|_{\mathcal{H}} \le \|\phi^*_\mu\|_{\mathcal{H}},$$
 which concludes the proof.
 ```
 
@@ -556,27 +556,27 @@ which concludes the proof.
 ```informal SVGD.kl_steepest_descent_eq
 Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, and let $H_0$ be a Hilbert space.
 Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\, \pi) < \infty$ and
-$\varphi^*_\mu \neq 0$. Let $u = \varphi^*_\mu / \|\varphi^*_\mu\|_{\mathcal{H}}$. Let
+$\phi^*_\mu \neq 0$. Let $u = \phi^*_\mu / \|\phi^*_\mu\|_{\mathcal{H}}$. Let
 $f \in \mathcal{H}$ with $\|f\|_{\mathcal{H}} \le 1$ and
 $$\nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(f)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = \nabla_\varepsilon \mathrm{KL}\big(T_\varepsilon(u)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0},$$
 where $T_\varepsilon(h) = I_d + \varepsilon h_\Phi$ for $h \in \mathcal{H}$. Then, $f = u$.
 ```
 
 ```proof SVGD.kl_steepest_descent_eq
-By Theorem A.8 (ii), and as $\langle u, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}$
+By Theorem A.8 (ii), and as $\langle u, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}$
 (see the proof of [Theorem A.8 (iii)](#SVGD.kl_steepest_descent_isMinOn)), the hypothesis reads
-$-\langle f, \varphi^*_\mu \rangle_{\mathcal{H}} = -\|\varphi^*_\mu\|_{\mathcal{H}}$. Thus,
-$\langle f, \varphi^*_\mu \rangle_{\mathcal{H}} = \|\varphi^*_\mu\|_{\mathcal{H}}$.
+$-\langle f, \phi^*_\mu \rangle_{\mathcal{H}} = -\|\phi^*_\mu\|_{\mathcal{H}}$. Thus,
+$\langle f, \phi^*_\mu \rangle_{\mathcal{H}} = \|\phi^*_\mu\|_{\mathcal{H}}$.
 
-We conclude by the equality case of the Cauchy–Schwarz inequality on the unit ball. As $\varphi^*_\mu \neq 0$, we have that
+We conclude by the equality case of the Cauchy–Schwarz inequality on the unit ball. As $\phi^*_\mu \neq 0$, we have that
 $\|u\|_{\mathcal{H}} = 1$. Thus, $\|f\|_{\mathcal{H}} \le \|u\|_{\mathcal{H}}$ and
-$$\langle f, u \rangle_{\mathcal{H}} = \frac{\langle f, \varphi^*_\mu \rangle_{\mathcal{H}}}{\|\varphi^*_\mu\|_{\mathcal{H}}} = 1 = \|u\|_{\mathcal{H}}^2.$$
+$$\langle f, u \rangle_{\mathcal{H}} = \frac{\langle f, \phi^*_\mu \rangle_{\mathcal{H}}}{\|\phi^*_\mu\|_{\mathcal{H}}} = 1 = \|u\|_{\mathcal{H}}^2.$$
 Then,
 $$\|f - u\|_{\mathcal{H}}^2 = \|f\|_{\mathcal{H}}^2 - 2 \langle f, u \rangle_{\mathcal{H}} + \|u\|_{\mathcal{H}}^2 = \|f\|_{\mathcal{H}}^2 - \|u\|_{\mathcal{H}}^2 \le 0.$$
 Thus, $f = u$, which concludes the proof.
 ```
 
-Along $\varphi^*_\mu$ itself, the slope is the opposite of the kernelized Stein discrepancy. This is
+Along $\phi^*_\mu$ itself, the slope is the opposite of the kernelized Stein discrepancy. This is
 the identity that SVGD uses.
 
 {{SVGD.kl_steepest_descent_direction | Theorem A.8 (v)}}
@@ -584,12 +584,12 @@ the identity that SVGD uses.
 ```informal SVGD.kl_steepest_descent_direction
 Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, and let $H_0$ be a Hilbert space.
 Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Then,
-$$\nabla_\varepsilon \mathrm{KL}\big((I_d + \varepsilon (\varphi^*_\mu)_\Phi)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\mathfrak{K}(\mu \mid \pi).$$
+$$\nabla_\varepsilon \mathrm{KL}\big((I_d + \varepsilon (\phi^*_\mu)_\Phi)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\mathfrak{K}(\mu \mid \pi).$$
 ```
 
 ```proof SVGD.kl_steepest_descent_direction
-By Theorem A.8 (ii) with $f = \varphi^*_\mu$, then [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd),
-$$\nabla_\varepsilon \mathrm{KL}\big((I_d + \varepsilon (\varphi^*_\mu)_\Phi)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\langle \varphi^*_\mu, \varphi^*_\mu \rangle_{\mathcal{H}} = -\|\varphi^*_\mu\|_{\mathcal{H}}^2 = -\mathfrak{K}(\mu \mid \pi).$$
+By Theorem A.8 (ii) with $f = \phi^*_\mu$, then [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd),
+$$\nabla_\varepsilon \mathrm{KL}\big((I_d + \varepsilon (\phi^*_\mu)_\Phi)_\#\mu \,\|\, \pi\big)\big|_{\varepsilon = 0} = -\langle \phi^*_\mu, \phi^*_\mu \rangle_{\mathcal{H}} = -\|\phi^*_\mu\|_{\mathcal{H}}^2 = -\mathfrak{K}(\mu \mid \pi).$$
 Theorem A.7 (iii) applies, as $H_0$ is a Hilbert space and $\mu \in \mathcal{P}(\Omega)$ (see the proof
 of Theorem A.8 (i)). This concludes the proof.
 ```
@@ -597,17 +597,17 @@ of Theorem A.8 (i)). This concludes the proof.
 ## The mean-field SVGD flow
 
 The flow $(T_t)_{t \ge 0}$ of Theorems A.11 and 3.1 is driven by the update directions of its own push-forwards. It satisfies
-$$\frac{d}{dt} T_t(x) = (\varphi^*_{\mu_t})_\Phi\big(T_t(x)\big), \qquad \mu_t = (T_t)_\#\mu.$$
+$$\frac{d}{dt} T_t(x) = (\phi^*_{\mu_t})_\Phi\big(T_t(x)\big), \qquad \mu_t = (T_t)_\#\mu.$$
 [Serre2025] assumes that such a flow exists. The formalization constructs it for every $\mu \in \mathcal{P}(\Omega)$, under the standing assumptions with $H_0$ a Hilbert space, and with no Lipschitz condition on the score $s$.
 
-We describe the flow by the curve $m : \mathbb{R} \to \mathcal{H}$ of its update directions. Recall that the trajectories of $m$ are the global solutions $X^m_{t_0, x} = \operatorname{sol}_v(t_0, x)$ of $\alpha' = v(t, \alpha)$, where $v(t, y) = m(t)_\Phi(y)$. Recall also that $\operatorname{sol}_v(t_0, x)$ is a solution with $\alpha(t_0) = x$, chosen with the axiom of choice, or the constant curve $x$ if there is none. We write $X^m_{t_0, \cdot}(t)$ for the map $x \mapsto X^m_{t_0, x}(t)$. The flow of $m$ is $T_t = X^m_{0, \cdot}(t)$, and the mean-field equation reads $m(t) = \varphi^*_{\mu_t}$ for $t \ge 0$.
+We describe the flow by the curve $m : \mathbb{R} \to \mathcal{H}$ of its update directions. Recall that the trajectories of $m$ are the global solutions $X^m_{t_0, x} = \operatorname{sol}_v(t_0, x)$ of $\alpha' = v(t, \alpha)$, where $v(t, y) = m(t)_\Phi(y)$. Recall also that $\operatorname{sol}_v(t_0, x)$ is a solution with $\alpha(t_0) = x$, chosen with the axiom of choice, or the constant curve $x$ if there is none. We write $X^m_{t_0, \cdot}(t)$ for the map $x \mapsto X^m_{t_0, x}(t)$. The flow of $m$ is $T_t = X^m_{0, \cdot}(t)$, and the mean-field equation reads $m(t) = \phi^*_{\mu_t}$ for $t \ge 0$.
 
 {{SVGD.IsMeanFieldCurve | Definition}}
 
 ```informal SVGD.IsMeanFieldCurve
 Let $H_0$ be a real inner product space, $\Phi : \mathbb{R}^d \to H_0$, $s : \mathbb{R}^d \to (\mathbb{R}^d)^*$ and $\mu$ a measure on $\mathbb{R}^d$. A curve $m : \mathbb{R} \to \mathcal{H}$ solves the mean-field SVGD equation from $\mu$ if
-$$\forall t \ge 0, \quad m(t) = \varphi^*_{(T_t)_\#\mu}, \qquad T_t : x \mapsto X^m_{0, x}(t).$$
-Here, $T_t$ is the flow of the vector field of $m$, and $(T_t)_\#\mu$ is the push-forward of $\mu$ by $T_t$. By convention, if $T_t$ is not $\mu$-almost everywhere measurable, $(T_t)_\#\mu$ is $0$ when $\mu = 0$ and an arbitrary Dirac mass otherwise. The update direction $\varphi^*_\nu = \int \xi_x \, d\nu(x)$ is a Bochner integral, equal to $0$ if $\xi$ is not $\nu$-integrable or if $\mathcal{H}$ is not complete. The definition requires no regularity of $m$.
+$$\forall t \ge 0, \quad m(t) = \phi^*_{(T_t)_\#\mu}, \qquad T_t : x \mapsto X^m_{0, x}(t).$$
+Here, $T_t$ is the flow of the vector field of $m$, and $(T_t)_\#\mu$ is the push-forward of $\mu$ by $T_t$. By convention, if $T_t$ is not $\mu$-almost everywhere measurable, $(T_t)_\#\mu$ is $0$ when $\mu = 0$ and an arbitrary Dirac mass otherwise. The update direction $\phi^*_\nu = \int \xi_x \, d\nu(x)$ is a Bochner integral, equal to $0$ if $\xi$ is not $\nu$-integrable or if $\mathcal{H}$ is not complete. The definition requires no regularity of $m$.
 ```
 
 The right-hand side of the equation depends on $m$ through its flow. Thus, the equation is a fixed point equation on the curve $m$. Under the standing assumptions, with $H_0$ a Hilbert space and $\mu \in \mathcal{P}(\Omega)$, it has a continuous bounded solution (see the [existence theorem](#SVGD.exists_meanField) below). The uniqueness of this solution is not claimed. The mean-field SVGD curve picks one of them.
@@ -683,13 +683,13 @@ Second, a trajectory that meets $\Omega$ stays in $\Omega$ at all times. As $\Ph
 Apply the second property to $X^m_{0, x}$, which takes the value $x$ at time $0$ and $T_t(x)$ at time $t$, and to $X^m_{t, T_t(x)}$, which takes the same values. We have that $x \in \Omega \iff T_t(x) \in \Omega$. Hence, the homeomorphism $T_t$ of $\mathbb{R}^d$ restricts to a homeomorphism $e$ of $\Omega$, which concludes the proof.
 ```
 
-We now prove that the mean-field SVGD equation has a solution. On a compact time interval $[a, b]$, a solution from $\nu \in \mathcal{P}(\Omega)$ at time $a$ is a fixed point of the map $G : g \mapsto \big(t \mapsto \varphi^*_{(X^g_{a, \cdot}(t))_\#\nu}\big)$. On the curves with values in the compact closed convex hull of $\xi(\Omega)$, the map $G$ is continuous, and its images are equicontinuous and lie in this hull. The value of $G g$ at time $t$ only depends on $g$ before $t$. Thus, $G$ has a fixed point by Tonelli's argument. The solutions on the intervals $[n, n + 1]$ are then concatenated.
+We now prove that the mean-field SVGD equation has a solution. On a compact time interval $[a, b]$, a solution from $\nu \in \mathcal{P}(\Omega)$ at time $a$ is a fixed point of the map $G : g \mapsto \big(t \mapsto \phi^*_{(X^g_{a, \cdot}(t))_\#\nu}\big)$. On the curves with values in the compact closed convex hull of $\xi(\Omega)$, the map $G$ is continuous, and its images are equicontinuous and lie in this hull. The value of $G g$ at time $t$ only depends on $g$ before $t$. Thus, $G$ has a fixed point by Tonelli's argument. The solutions on the intervals $[n, n + 1]$ are then concatenated.
 
 {{SVGD.exists_meanField | Theorem}}
 
 ```informal SVGD.exists_meanField | Existence of a solution of the mean-field SVGD equation on $[0, \infty)$
 Assume the standing assumptions for $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$ and $C$, and let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$, i.e. $\mu$ is a probability measure on $\mathbb{R}^d$ with $x \in \Omega$ for $\mu$-almost every $x$. Let $\mathcal{K}$ be the closed convex hull of $\xi(\Omega) = \{\xi_x \mid x \in \Omega\}$ in $\mathcal{H}$. Then there exists a continuous curve $m : \mathbb{R} \to \mathcal{H}$, with $m(t) \in \mathcal{K}$ for every $t \in \mathbb{R}$, that solves the mean-field SVGD equation from $\mu$, i.e.
-$$\forall t \ge 0, \quad m(t) = \varphi^*_{(T_t)_\#\mu}, \qquad T_t : x \mapsto X^m_{0, x}(t).$$
+$$\forall t \ge 0, \quad m(t) = \phi^*_{(T_t)_\#\mu}, \qquad T_t : x \mapsto X^m_{0, x}(t).$$
 ```
 
 ```proof SVGD.exists_meanField
@@ -699,7 +699,7 @@ The proof has four steps. First, we study the set $\mathcal{K}$. Next, we recall
 
 **Claim 1.** $\mathcal{K}$ is compact. By [Lemma A.6 (i)](#SVGD.xi_regularity_uniformContinuousOn), $x \mapsto \xi_x$ is uniformly continuous, hence continuous, on the compact set $\Omega$. Thus, $\xi(\Omega)$ is compact. As $H_0$ is a Hilbert space, so is $\mathcal{H} = H_0^d$. In a real Banach space, the closed convex hull of a compact set is compact. It is the closure of the convex hull, which is totally bounded as the convex hull of a totally bounded set. It is also complete, as a closed subset of a complete space.
 
-**Claim 2.** For every $\nu \in \mathcal{P}(\Omega)$, $\varphi^*_\nu \in \mathcal{K}$. We have that $\varphi^*_\nu = \int \xi_x \, d\nu(x)$, where $\xi$ is $\nu$-integrable by [Lemma A.6 (iii)](#SVGD.xi_regularity_integrable). Also, $\xi_x \in \xi(\Omega) \subseteq \mathcal{K}$ for $\nu$-almost every $x$. As $\mathcal{K}$ is closed and convex and $\nu$ is a probability measure, the mean $\varphi^*_\nu$ lies in $\mathcal{K}$.
+**Claim 2.** For every $\nu \in \mathcal{P}(\Omega)$, $\phi^*_\nu \in \mathcal{K}$. We have that $\phi^*_\nu = \int \xi_x \, d\nu(x)$, where $\xi$ is $\nu$-integrable by [Lemma A.6 (iii)](#SVGD.xi_regularity_integrable). Also, $\xi_x \in \xi(\Omega) \subseteq \mathcal{K}$ for $\nu$-almost every $x$. As $\mathcal{K}$ is closed and convex and $\nu$ is a probability measure, the mean $\phi^*_\nu$ lies in $\mathcal{K}$.
 
 **Claim 3.** There is $B \ge 0$ such that $\|h\|_{\mathcal{H}} \le B$ for every $h \in \mathcal{K}$. By Claim 1, $\mathcal{K}$ is compact, hence bounded.
 
@@ -728,12 +728,12 @@ Thus, for every $n \in \mathbb{N}$, there is $u_n \in S$ with $u_n = G u_n \circ
 **Step 3.** A solution on a compact time interval.
 
 **Claim 4.** Let $\nu \in \mathcal{P}(\Omega)$ and $a \le b$. There is a continuous curve $m : \mathbb{R} \to \mathcal{H}$, with $m(t) \in \mathcal{K}$ for every $t \in \mathbb{R}$, such that
-$$\forall t \in [a, b], \quad m(t) = \varphi^*_{(X^m_{a, \cdot}(t))_\#\nu}.$$
+$$\forall t \in [a, b], \quad m(t) = \phi^*_{(X^m_{a, \cdot}(t))_\#\nu}.$$
 
 As $\nu$ is a probability measure carried by $\Omega$, $\Omega$ is nonempty. Let $S$ be the set of bounded continuous curves $g : [a, b] \to \mathcal{H}$ with values in $\mathcal{K}$. For $g \in S$, let $\bar g = g \circ \operatorname{pr} : \mathbb{R} \to \mathcal{H}$ be its extension by constants, where $\operatorname{pr}$ is the projection on $[a, b]$. Then $\bar g$ is continuous, and bounded by $B$ by Claim 3. As in the proof that [the flow starts at the identity](#SVGD.meanFieldFlow_zero), its vector field is continuous in time and $BK$-Lipschitz in space. Thus, for every $t \in \mathbb{R}$, the map $X^{\bar g}_{a, \cdot}(t)$ is continuous. It maps $\Omega$ to $\Omega$, as $\Phi$ vanishes on the frontier of $\Omega$ (see the proof that [the flow maps are homeomorphisms of $\Omega$](#SVGD.exists_homeomorph_meanFieldFlow)).
 
 For $g \in S$ and $t \in [a, b]$, let
-$$F g(t) = \varphi^*_{(X^{\bar g}_{a, \cdot}(t))_\#\nu}.$$
+$$F g(t) = \phi^*_{(X^{\bar g}_{a, \cdot}(t))_\#\nu}.$$
 The measure $(X^{\bar g}_{a, \cdot}(t))_\#\nu$ is a probability measure carried by $\Omega$. Thus, $F g(t) \in \mathcal{K}$ by Claim 2.
 
 *Integrals against image measures.* We use the following estimate, which holds as $\Omega$ is compact and $\nu \in \mathcal{P}(\Omega)$. Let $f : \mathbb{R}^d \to \mathcal{H}$ be continuous on $\Omega$, and let $\psi_1, \psi_2 : \mathbb{R}^d \to \mathbb{R}^d$ be continuous maps with $\psi_1(\Omega) \subseteq \Omega$ and $\psi_2(\Omega) \subseteq \Omega$. Let $\varepsilon, \eta \in \mathbb{R}$ such that $\|f(x) - f(y)\| \le \varepsilon$ for all $x, y \in \Omega$ with $\|x - y\| < \eta$. Assume that $\|\psi_1(x) - \psi_2(x)\| < \eta$ for every $x \in \Omega$. Then
@@ -756,14 +756,14 @@ and the field of $\bar g'$ is $BK$-Lipschitz. By Grönwall's inequality for appr
 $$\begin{aligned} \|X^{\bar g'}_{a, x}(t) - X^{\bar g}_{a, x}(t)\| &\le \gamma\big(C \, d_\infty(g', g), t - a\big) \\ &\le \gamma\big(C \, d_\infty(g', g), b - a\big) \\ &< \eta. \end{aligned}$$
 By (E), $\|G g'(t) - G g(t)\| \le \varepsilon / 2$ for every $t \in [a, b]$. Hence, $d_\infty(G g', G g) \le \varepsilon / 2 < \varepsilon$.
 
-*Causality.* Let $g, g' \in S$ and $\tau \in [a, b]$ with $g = g'$ on $[a, \tau]$. Then $\bar g = \bar g'$ on $[a, \tau]$. Two continuous curves bounded by $B$ that agree between times $a$ and $\tau$ have the same trajectories from $a$ to $\tau$, by uniqueness of the solutions. Thus, $X^{\bar g}_{a, \cdot}(\tau) = X^{\bar g'}_{a, \cdot}(\tau)$, and $G g(\tau) = G g'(\tau)$. Finally, $X^{\bar g}_{a, x}(a) = x$ for every $x$, so $G g(a) = \varphi^*_\nu$ for every $g \in S$.
+*Causality.* Let $g, g' \in S$ and $\tau \in [a, b]$ with $g = g'$ on $[a, \tau]$. Then $\bar g = \bar g'$ on $[a, \tau]$. Two continuous curves bounded by $B$ that agree between times $a$ and $\tau$ have the same trajectories from $a$ to $\tau$, by uniqueness of the solutions. Thus, $X^{\bar g}_{a, \cdot}(\tau) = X^{\bar g'}_{a, \cdot}(\tau)$, and $G g(\tau) = G g'(\tau)$. Finally, $X^{\bar g}_{a, x}(a) = x$ for every $x$, so $G g(a) = \phi^*_\nu$ for every $g \in S$.
 
 *Fixed point.* The set $\mathcal{K}$ is compact by Claim 1. It is nonempty, as it contains $\xi(\Omega)$ and $\Omega \ne \emptyset$. Thus, the theorem of Step 2 applies, with $Y = \mathcal{H}$ and $\mathcal{K}' = \mathcal{K}$. Its hypotheses (i) to (v) are the properties of $G$ proved above, and (iii) follows from the equicontinuity. It gives $g \in S$ with $G g = g$. Let $m = \bar g$. Then $m$ is continuous, and $m(t) = g(\operatorname{pr}(t)) \in \mathcal{K}$ for every $t \in \mathbb{R}$. For $t \in [a, b]$, we have that $\bar g(t) = g(t)$, so
-$$m(t) = g(t) = G g(t) = \varphi^*_{(X^m_{a, \cdot}(t))_\#\nu},$$
+$$m(t) = g(t) = G g(t) = \phi^*_{(X^m_{a, \cdot}(t))_\#\nu},$$
 which proves Claim 4.
 
 **Step 4.** Concatenation. For every $n \in \mathbb{N}$ and every measure $\nu$ on $\mathbb{R}^d$, we choose a curve $m_{n, \nu} : \mathbb{R} \to \mathcal{H}$ as follows. If $\nu \in \mathcal{P}(\Omega)$, Claim 4 with $a = n$ and $b = n + 1$ gives a continuous curve $m_{n, \nu}$ with values in $\mathcal{K}$ such that
-$$\forall t \in [n, n + 1], \quad m_{n, \nu}(t) = \varphi^*_{(X^{m_{n, \nu}}_{n, \cdot}(t))_\#\nu}.$$
+$$\forall t \in [n, n + 1], \quad m_{n, \nu}(t) = \phi^*_{(X^{m_{n, \nu}}_{n, \cdot}(t))_\#\nu}.$$
 Otherwise, $m_{n, \nu}$ is an arbitrary curve, which plays no role. We define the measures $\nu_n$ reached at the integer times, and the curves $m_n$, by induction,
 $$\nu_0 = \mu, \qquad m_n = m_{n, \nu_n}, \qquad \nu_{n + 1} = \big(X^{m_n}_{n, \cdot}(n + 1)\big)_\#\nu_n.$$
 By induction, $\nu_n \in \mathcal{P}(\Omega)$ for every $n$. First, $\nu_0 = \mu \in \mathcal{P}(\Omega)$. If $\nu_n \in \mathcal{P}(\Omega)$, then $m_n$ is continuous and bounded by $B$, and its trajectories stay in $\Omega$. Thus, $\nu_{n+1}$ is a probability measure carried by $\Omega$. Hence, every $m_n$ is continuous, with values in $\mathcal{K}$, bounded by $B$, and solves the equation on $[n, n + 1]$ from $\nu_n$ at time $n$.
@@ -772,7 +772,7 @@ Let $\lfloor t \rfloor_+ = \max(\lfloor t \rfloor, 0) \in \mathbb{N}$. The conca
 $$M(t) = m_{\lfloor t \rfloor_+}(t), \qquad t \in \mathbb{R}.$$
 
 **Claim 5.** For every $n \in \mathbb{N}$, $M = m_n$ on $[n, n + 1]$. For $t \in [n, n + 1)$, we have that $\lfloor t \rfloor_+ = n$, so $M(t) = m_n(t)$. At $t = n + 1$, both curves are the update direction of $\nu_{n+1}$. As $X^{m_{n+1}}_{n+1, x}(n + 1) = x$ for every $x$, we have that
-$$\begin{aligned} M(n + 1) = m_{n+1}(n + 1) &= \varphi^*_{(X^{m_{n+1}}_{n+1, \cdot}(n+1))_\#\nu_{n+1}} \\ &= \varphi^*_{\nu_{n+1}} \\ &= \varphi^*_{(X^{m_n}_{n, \cdot}(n+1))_\#\nu_n} \\ &= m_n(n + 1). \end{aligned}$$
+$$\begin{aligned} M(n + 1) = m_{n+1}(n + 1) &= \phi^*_{(X^{m_{n+1}}_{n+1, \cdot}(n+1))_\#\nu_{n+1}} \\ &= \phi^*_{\nu_{n+1}} \\ &= \phi^*_{(X^{m_n}_{n, \cdot}(n+1))_\#\nu_n} \\ &= m_n(n + 1). \end{aligned}$$
 
 We also have that $M = m_0$ on $(-\infty, 1]$, as $\lfloor t \rfloor_+ = 0$ for $t < 1$, and by Claim 5 at $t = 1$. Thus, $M$ is continuous by the following gluing lemma. A function on $\mathbb{R}$ that agrees with a continuous function $f_0$ on $(-\infty, 1]$, and with a continuous function $f_n$ on $[n, n + 1]$ for every $n \in \mathbb{N}$, is continuous. As $M(t) = m_{\lfloor t \rfloor_+}(t) \in \mathcal{K}$ for every $t \in \mathbb{R}$, $M$ is bounded by $B$.
 
@@ -784,7 +784,7 @@ By the flow property, $X^M_{0, x}(t) = X^M_{n, X^M_{0, x}(n)}(t)$ for every $x$.
 $$(X^M_{0, \cdot}(n + 1))_\#\mu = \big(X^{m_n}_{n, \cdot}(n + 1)\big)_\#\nu_n = \nu_{n+1}.$$
 
 Finally, let $t \ge 0$ and $n = \lfloor t \rfloor_+$, so that $t \in [n, n + 1]$. By Claim 5, the equation solved by $m_n$, Claim 7 and Claim 6, we have that
-$$\begin{aligned} M(t) &= m_n(t) \\ &= \varphi^*_{(X^{m_n}_{n, \cdot}(t))_\#\nu_n} \\ &= \varphi^*_{(X^{m_n}_{n, \cdot}(t))_\#((X^M_{0, \cdot}(n))_\#\mu)} \\ &= \varphi^*_{(X^M_{0, \cdot}(t))_\#\mu}. \end{aligned}$$
+$$\begin{aligned} M(t) &= m_n(t) \\ &= \phi^*_{(X^{m_n}_{n, \cdot}(t))_\#\nu_n} \\ &= \phi^*_{(X^{m_n}_{n, \cdot}(t))_\#((X^M_{0, \cdot}(n))_\#\mu)} \\ &= \phi^*_{(X^M_{0, \cdot}(t))_\#\mu}. \end{aligned}$$
 Thus, $M$ is a continuous curve with values in $\mathcal{K}$ that solves the mean-field SVGD equation from $\mu$, which concludes the proof.
 ```
 
@@ -794,29 +794,29 @@ Thus, under the standing assumptions, with $H_0$ a Hilbert space and $\mu \in \m
 
 ```informal SVGD.meanFieldCurve_eq_direction
 Assume the standing assumptions for $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$ and $C$, and let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$. Let $m$ and $T_t$ be the mean-field SVGD curve and flow from $\mu$, and $\mu_t = (T_t)_\#\mu$. Then
-$$\forall t \ge 0, \quad m(t) = \varphi^*_{\mu_t}.$$
+$$\forall t \ge 0, \quad m(t) = \phi^*_{\mu_t}.$$
 ```
 
 ```proof SVGD.meanFieldCurve_eq_direction
-By the [previous theorem](#SVGD.exists_meanField), there is a continuous curve with values in the closed convex hull $\mathcal{K}$ of $\xi(\Omega)$ that solves the mean-field SVGD equation from $\mu$. It is bounded, as $\mathcal{K}$ is bounded (Claim 3 in the proof of the [previous theorem](#SVGD.exists_meanField)). Thus, a continuous bounded solution exists, and $m$ is one of them, chosen with the axiom of choice. As $T_t = X^m_{0, \cdot}(t)$, the equation solved by $m$ reads $m(t) = \varphi^*_{(T_t)_\#\mu} = \varphi^*_{\mu_t}$ for every $t \ge 0$.
+By the [previous theorem](#SVGD.exists_meanField), there is a continuous curve with values in the closed convex hull $\mathcal{K}$ of $\xi(\Omega)$ that solves the mean-field SVGD equation from $\mu$. It is bounded, as $\mathcal{K}$ is bounded (Claim 3 in the proof of the [previous theorem](#SVGD.exists_meanField)). Thus, a continuous bounded solution exists, and $m$ is one of them, chosen with the axiom of choice. As $T_t = X^m_{0, \cdot}(t)$, the equation solved by $m$ reads $m(t) = \phi^*_{(T_t)_\#\mu} = \phi^*_{\mu_t}$ for every $t \ge 0$.
 ```
 
 {{SVGD.hasDerivAt_meanFieldFlow | Theorem}}
 
 ```informal SVGD.hasDerivAt_meanFieldFlow
 Assume the standing assumptions for $\Omega$, $\pi$, $p$, $s$, $\Phi$, $K$ and $C$, and let $H_0$ be a Hilbert space. Let $\mu \in \mathcal{P}(\Omega)$, $T_t$ the mean-field SVGD flow from $\mu$, and $\mu_t = (T_t)_\#\mu$. Let $x \in \mathbb{R}^d$ and $t \ge 0$. Then the map $\tau \mapsto T_\tau(x)$, from $\mathbb{R}$ to $\mathbb{R}^d$, is differentiable at $t$, and
-$$\frac{d}{dt} T_t(x) = (\varphi^*_{\mu_t})_\Phi\big(T_t(x)\big).$$
+$$\frac{d}{dt} T_t(x) = (\phi^*_{\mu_t})_\Phi\big(T_t(x)\big).$$
 ```
 
 ```proof SVGD.hasDerivAt_meanFieldFlow
 Let $m$ be the mean-field SVGD curve from $\mu$. It is [continuous](#SVGD.continuous_meanFieldCurve) and [bounded](#SVGD.exists_norm_meanFieldCurve_le) by some $B \ge 0$. Thus, its vector field is continuous in time and $BK$-Lipschitz in space. As in the proof that [the flow starts at the identity](#SVGD.meanFieldFlow_zero), $\alpha' = m(\tau)_\Phi(\alpha)$ has a solution on $\mathbb{R}$ through $x$ at time $0$. Hence, $\tau \mapsto T_\tau(x) = X^m_{0, x}(\tau)$ is such a solution, and it is differentiable at $t$ with
 $$\frac{d}{dt} T_t(x) = m(t)_\Phi\big(T_t(x)\big).$$
-As $t \ge 0$, we have that $m(t) = \varphi^*_{\mu_t}$ by the [previous theorem](#SVGD.meanFieldCurve_eq_direction), which concludes the proof.
+As $t \ge 0$, we have that $m(t) = \phi^*_{\mu_t}$ by the [previous theorem](#SVGD.meanFieldCurve_eq_direction), which concludes the proof.
 ```
 
 ## The time derivative of the Kullback–Leibler divergence
 
-Along a solution of the mean-field equation, the particles follow $\varphi^*_{\mu_t}$, the direction of
+Along a solution of the mean-field equation, the particles follow $\phi^*_{\mu_t}$, the direction of
 steepest descent of Theorem A.8. Thus, the Kullback–Leibler divergence to $\pi$ decreases at rate
 $\mathfrak{K}(\mu_t \mid \pi)$. The proof is Lagrangian. It transports $\pi$ backwards along the flow,
 and needs neither a density for $\mu_t$ nor the continuity equation.
@@ -829,7 +829,7 @@ Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\
 $B \ge 0$, and let $m : \mathbb{R} \to \mathcal{H}$ be continuous with $\|m(t)\|_{\mathcal{H}} \le B$ for
 every $t \in \mathbb{R}$. For $t \in \mathbb{R}$, let $T_t(x) = X^m_{0, x}(t)$ and
 $\mu_t = (T_t)_\#\mu$. Assume that $m$ solves the mean-field equation from $\mu$, i.e.
-$$\forall t \ge 0, \quad m(t) = \varphi^*_{\mu_t}.$$
+$$\forall t \ge 0, \quad m(t) = \phi^*_{\mu_t}.$$
 For $t \in \mathbb{R}$, let $F(t) = \mathrm{KL}(\mu_t \,\|\, \pi)$ if this divergence is finite, and
 $F(t) = 0$ otherwise. Then, for every $t \ge 0$, $F : \mathbb{R} \to \mathbb{R}$ is differentiable at
 $t$ and
@@ -913,8 +913,8 @@ differentiable at $t$ and
 $$F'(t) = -\int \big( s(y)(m(t)_\Phi(y)) + \operatorname{div} m(t)_\Phi(y) \big) \, d\mu_t(y) = -\mathbb{E}_{y \sim \mu_t}[\mathcal{A}_\pi m(t)(y)].$$
 
 Now, let $t \ge 0$. As $\mu_t \in \mathcal{P}(\Omega)$ and $H_0$ is a Hilbert space, Theorem A.7 applies
-to $\mu_t$. The mean-field equation gives $m(t) = \varphi^*_{\mu_t}$. We obtain
-$$\begin{aligned} \mathbb{E}_{y \sim \mu_t}[\mathcal{A}_\pi m(t)(y)] &= \langle m(t), \varphi^*_{\mu_t} \rangle_{\mathcal{H}} \quad (\text{Theorem A.7 (i)}) \\ &= \langle m(t), m(t) \rangle_{\mathcal{H}} = \|m(t)\|_{\mathcal{H}}^2 \quad (\text{mean-field equation}) \\ &= \|\varphi^*_{\mu_t}\|_{\mathcal{H}}^2 \quad (\text{mean-field equation}) \\ &= \mathfrak{K}(\mu_t \mid \pi) \quad (\text{Theorem A.7 (iii)}). \end{aligned}$$
+to $\mu_t$. The mean-field equation gives $m(t) = \phi^*_{\mu_t}$. We obtain
+$$\begin{aligned} \mathbb{E}_{y \sim \mu_t}[\mathcal{A}_\pi m(t)(y)] &= \langle m(t), \phi^*_{\mu_t} \rangle_{\mathcal{H}} \quad (\text{Theorem A.7 (i)}) \\ &= \langle m(t), m(t) \rangle_{\mathcal{H}} = \|m(t)\|_{\mathcal{H}}^2 \quad (\text{mean-field equation}) \\ &= \|\phi^*_{\mu_t}\|_{\mathcal{H}}^2 \quad (\text{mean-field equation}) \\ &= \mathfrak{K}(\mu_t \mid \pi) \quad (\text{Theorem A.7 (iii)}). \end{aligned}$$
 Therefore,
 $F'(t) = -\mathfrak{K}(\mu_t \mid \pi)$, which concludes the proof.
 ```
@@ -944,7 +944,7 @@ $\mathrm{KL}(\mu \,\|\, \pi) < \infty$, $\mu$ is carried by $\Omega$ (see the pr
 Theorem A.11′ (i)). Thus, $\mu \in \mathcal{P}(\Omega)$. Then, the mean-field equation from $\mu$ has a
 continuous solution with values in the closed convex hull of $\xi(\Omega)$, by the [existence theorem](#SVGD.exists_meanField).
 This hull is compact, hence bounded, so this solution is bounded. The curve $m$ is then such a
-solution, i.e. $m(t) = \varphi^*_{\mu_t}$ for every $t \ge 0$.
+solution, i.e. $m(t) = \phi^*_{\mu_t}$ for every $t \ge 0$.
 Theorem A.11′ (i) applied to $m$ concludes the proof.
 ```
 
@@ -958,7 +958,7 @@ Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, and let $H
 Let $\mu$ be a probability measure on $\mathbb{R}^d$ with $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let
 $B \ge 0$, and let $m : \mathbb{R} \to \mathcal{H}$ be continuous with $\|m(t)\|_{\mathcal{H}} \le B$ for
 every $t \in \mathbb{R}$. For $t \in \mathbb{R}$, let $T_t(x) = X^m_{0, x}(t)$ and
-$\mu_t = (T_t)_\#\mu$. Assume that $m(t) = \varphi^*_{\mu_t}$ for every $t \ge 0$. For
+$\mu_t = (T_t)_\#\mu$. Assume that $m(t) = \phi^*_{\mu_t}$ for every $t \ge 0$. For
 $t \in \mathbb{R}$, let $F(t) = \mathrm{KL}(\mu_t \,\|\, \pi)$ if this divergence is finite, and
 $F(t) = 0$ otherwise. Then, $F$ is non-increasing on $[0, \infty)$, i.e.
 $$\forall t_1, t_2 \in [0, \infty), \quad t_1 \le t_2 \implies F(t_2) \le F(t_1).$$
@@ -1013,7 +1013,7 @@ $$\forall \psi \in C(\Omega, \mathbb{R}), \forall \varepsilon > 0, \exists f \in
 This equivalence is not formalized.
 ```
 
-A Stein-universal kernel makes the kernelized Stein discrepancy a valid discrepancy on $\mathcal{P}(\Omega)$. In [Serre2025], the direct implication relies on Stein's identity. The formalization uses Theorem A.8 (i) instead, which needs no Stein class assumption on $\varphi^*_\pi$.
+A Stein-universal kernel makes the kernelized Stein discrepancy a valid discrepancy on $\mathcal{P}(\Omega)$. In [Serre2025], the direct implication relies on Stein's identity. The formalization uses Theorem A.8 (i) instead, which needs no Stein class assumption on $\phi^*_\pi$.
 
 {{SVGD.ksd_valid_discrepancy | Proposition 3.2}}
 
@@ -1026,12 +1026,12 @@ $$\nu = \pi \iff \mathfrak{K}(\nu \mid \pi) = 0.$$
 First, $\pi \in \mathcal{P}(\Omega)$. By the standing assumptions, $\pi$ is a probability measure. As $\pi = p \cdot \lambda|_\Omega$ is absolutely continuous with respect to $\lambda|_\Omega$, it gives no mass to $\mathbb{R}^d \setminus \Omega$, i.e. $x \in \Omega$ for $\pi$-almost every $x$. Here, $\Omega$ is measurable, as it is compact.
 
 **The discrepancy of $\pi$ is null.** Let's show that $\mathfrak{K}(\pi \mid \pi) = 0$. For $\varepsilon \in \mathbb{R}$, let
-$$h(\varepsilon) = \mathrm{KL}\big((I_d + \varepsilon\, (\varphi^*_\pi)_\Phi)_\# \pi \,\big\|\, \pi\big),$$
-seen as a real number, where $\infty$ is mapped to $0$. Then, $h \ge 0$ and $h(0) = \mathrm{KL}(\pi \,\|\, \pi) = 0$. Thus, $h$ has a minimum at $0$. As $\mathrm{KL}(\pi \,\|\, \pi) = 0 < \infty$, [Theorem A.8 (i)](#SVGD.kl_steepest_descent_hasDerivAt), applied to $\pi$ and $\varphi^*_\pi$, shows that $h$ is differentiable at $0$, with
-$$h'(0) = -\langle \varphi^*_\pi, \varphi^*_\pi \rangle_{\mathcal{H}}.$$
+$$h(\varepsilon) = \mathrm{KL}\big((I_d + \varepsilon\, (\phi^*_\pi)_\Phi)_\# \pi \,\big\|\, \pi\big),$$
+seen as a real number, where $\infty$ is mapped to $0$. Then, $h \ge 0$ and $h(0) = \mathrm{KL}(\pi \,\|\, \pi) = 0$. Thus, $h$ has a minimum at $0$. As $\mathrm{KL}(\pi \,\|\, \pi) = 0 < \infty$, [Theorem A.8 (i)](#SVGD.kl_steepest_descent_hasDerivAt), applied to $\pi$ and $\phi^*_\pi$, shows that $h$ is differentiable at $0$, with
+$$h'(0) = -\langle \phi^*_\pi, \phi^*_\pi \rangle_{\mathcal{H}}.$$
 By Fermat's theorem, $h'(0) = 0$. As $\pi \in \mathcal{P}(\Omega)$, [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd) gives
-$$\mathfrak{K}(\pi \mid \pi) = \|\varphi^*_\pi\|_{\mathcal{H}}^2 = \langle \varphi^*_\pi, \varphi^*_\pi \rangle_{\mathcal{H}} = -h'(0) = 0.$$
-Stein's identity (Lemma A.3) would also give this result, but it requires $\varphi^*_\pi$ to be in the Stein class of $\pi$.
+$$\mathfrak{K}(\pi \mid \pi) = \|\phi^*_\pi\|_{\mathcal{H}}^2 = \langle \phi^*_\pi, \phi^*_\pi \rangle_{\mathcal{H}} = -h'(0) = 0.$$
+Stein's identity (Lemma A.3) would also give this result, but it requires $\phi^*_\pi$ to be in the Stein class of $\pi$.
 
 **Direct implication.** If $\nu = \pi$, then $\mathfrak{K}(\nu \mid \pi) = \mathfrak{K}(\pi \mid \pi) = 0$.
 
@@ -1039,8 +1039,8 @@ Stein's identity (Lemma A.3) would also give this result, but it requires $\varp
 $$\forall x \in \Omega, \ |g(x) - \mathcal{A}_\pi f(x) - c| \le \varepsilon.$$
 Then, $|\mathbb{E}_{x \sim \rho}[g(x)] - c| \le \varepsilon$.
 
-Let's prove the claim. By [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd), $\|\varphi^*_\rho\|_{\mathcal{H}}^2 = \mathfrak{K}(\rho \mid \pi) = 0$. Thus, $\varphi^*_\rho = 0$. By [Theorem A.7 (i)](#SVGD.steepest_trajectory_integral), we have that
-$$\mathbb{E}_{x \sim \rho}[\mathcal{A}_\pi f(x)] = \langle f, \varphi^*_\rho \rangle_{\mathcal{H}} = 0.$$
+Let's prove the claim. By [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd), $\|\phi^*_\rho\|_{\mathcal{H}}^2 = \mathfrak{K}(\rho \mid \pi) = 0$. Thus, $\phi^*_\rho = 0$. By [Theorem A.7 (i)](#SVGD.steepest_trajectory_integral), we have that
+$$\mathbb{E}_{x \sim \rho}[\mathcal{A}_\pi f(x)] = \langle f, \phi^*_\rho \rangle_{\mathcal{H}} = 0.$$
 The function $g$ is $\rho$-integrable, as it is bounded and continuous and $\rho$ is finite. The function $\mathcal{A}_\pi f$ is [continuous](#SVGD.continuousOn_steinOperator) on the compact set $\Omega$, which carries $\rho$. Thus, $\mathcal{A}_\pi f$ is also $\rho$-integrable. As $\rho(\mathbb{R}^d) = 1$, the linearity of the integral gives
 $$\mathbb{E}_{x \sim \rho}[g(x)] - c = \mathbb{E}_{x \sim \rho}[g(x) - \mathcal{A}_\pi f(x) - c].$$
 As $x \in \Omega$ for $\rho$-almost every $x$, the absolute value of the integrand is at most $\varepsilon$, $\rho$-almost everywhere. Therefore, $|\mathbb{E}_{x \sim \rho}[g(x)] - c| \le \varepsilon \, \rho(\mathbb{R}^d) = \varepsilon$, which proves the claim.
@@ -1067,15 +1067,15 @@ We first show that $\mu_t \in \mathcal{P}(\Omega)$ for every $t \in \mathbb{R}$.
 
 Let $D \in \mathbb{R}$ such that $\forall x \in \Omega, \|\xi_x\|_{\mathcal{H}} \le D$, given by [Lemma A.6 (ii)](#SVGD.xi_regularity_exists_bound).
 
-**Steps 1 and 2.** Let's show that $t \mapsto \varphi^*_{\mu_t}$ is uniformly continuous from $\mathbb{R}$ to $\mathcal{H}$. By definition, $\varphi^*_{\mu_t} = \int \xi_y \, d\mu_t(y)$. We use the following result. Let $\Omega$ be compact, and let $\Phi$ be $K$-Lipschitz, bounded by $C$ and zero on the frontier of $\Omega$. Let $\mu \in \mathcal{P}(\Omega)$, $E$ a real normed space, $F : \mathbb{R}^d \to E$ uniformly continuous on $\Omega$, and $\varepsilon > 0$. There exists $\delta > 0$ such that, for every continuous curve $m'$ of $\mathcal{H}$ bounded by $B$ and all $a, t, r \in \mathbb{R}$,
+**Steps 1 and 2.** Let's show that $t \mapsto \phi^*_{\mu_t}$ is uniformly continuous from $\mathbb{R}$ to $\mathcal{H}$. By definition, $\phi^*_{\mu_t} = \int \xi_y \, d\mu_t(y)$. We use the following result. Let $\Omega$ be compact, and let $\Phi$ be $K$-Lipschitz, bounded by $C$ and zero on the frontier of $\Omega$. Let $\mu \in \mathcal{P}(\Omega)$, $E$ a real normed space, $F : \mathbb{R}^d \to E$ uniformly continuous on $\Omega$, and $\varepsilon > 0$. There exists $\delta > 0$ such that, for every continuous curve $m'$ of $\mathcal{H}$ bounded by $B$ and all $a, t, r \in \mathbb{R}$,
 $$|t - r| < \delta \implies \Big\| \int F \, d\big(X^{m'}_{a, \cdot}(t)\big)_\# \mu - \int F \, d\big(X^{m'}_{a, \cdot}(r)\big)_\# \mu \Big\| < \varepsilon.$$
 Its proof follows Steps 1 and 2 of [Serre2025]. As $\|m'(\tau)_\Phi(y)\|_2 \le \|m'(\tau)\|_{\mathcal{H}} \|\Phi(y)\| \le BC$, the mean value inequality shows that the trajectories are $BC$-Lipschitz in time. Let $\eta > 0$ such that $\|F(x) - F(y)\| < \varepsilon / 2$ for all $x, y \in \Omega$ with $\|x - y\|_2 < \eta$, and let $\delta = \eta / (BC + 1)$. If $|t - r| < \delta$, then $\|X^{m'}_{a, x}(t) - X^{m'}_{a, x}(r)\|_2 < \eta$ for every $x \in \mathbb{R}^d$. When $x \in \Omega$, these two points lie in $\Omega$, so that $\|F(X^{m'}_{a, x}(t)) - F(X^{m'}_{a, x}(r))\| \le \varepsilon / 2$. As $\mu$ is a probability measure carried by $\Omega$, the change of variables formula then bounds the distance between the two integrals by $\varepsilon / 2 < \varepsilon$.
 
-By [Lemma A.6 (i)](#SVGD.xi_regularity_uniformContinuousOn), $x \mapsto \xi_x$ is uniformly continuous on $\Omega$. Applying this result to $F = \xi$, $m' = m$ and $a = 0$ shows that $t \mapsto \varphi^*_{\mu_t}$ is uniformly continuous.
+By [Lemma A.6 (i)](#SVGD.xi_regularity_uniformContinuousOn), $x \mapsto \xi_x$ is uniformly continuous on $\Omega$. Applying this result to $F = \xi$, $m' = m$ and $a = 0$ shows that $t \mapsto \phi^*_{\mu_t}$ is uniformly continuous.
 
 **Step 3.** Let's show that $t \mapsto \mathfrak{K}(\mu_t \mid \pi)$ is uniformly continuous. As $\mu_t \in \mathcal{P}(\Omega)$, [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd) gives
-$$\forall t \in \mathbb{R}, \ \mathfrak{K}(\mu_t \mid \pi) = \|\varphi^*_{\mu_t}\|_{\mathcal{H}}^2.$$
-The norm is $1$-Lipschitz, so $t \mapsto \|\varphi^*_{\mu_t}\|_{\mathcal{H}}$ is uniformly continuous. By [Lemma A.6 (iv)](#SVGD.xi_regularity_norm_direction_le), it takes its values in $[0, D]$. By Heine's theorem, the continuous map $x \mapsto x^2$ is uniformly continuous on the compact interval $[0, D]$. Thus, the composition $t \mapsto \|\varphi^*_{\mu_t}\|_{\mathcal{H}}^2 = \mathfrak{K}(\mu_t \mid \pi)$ is uniformly continuous on $\mathbb{R}$, which concludes the proof.
+$$\forall t \in \mathbb{R}, \ \mathfrak{K}(\mu_t \mid \pi) = \|\phi^*_{\mu_t}\|_{\mathcal{H}}^2.$$
+The norm is $1$-Lipschitz, so $t \mapsto \|\phi^*_{\mu_t}\|_{\mathcal{H}}$ is uniformly continuous. By [Lemma A.6 (iv)](#SVGD.xi_regularity_norm_direction_le), it takes its values in $[0, D]$. By Heine's theorem, the continuous map $x \mapsto x^2$ is uniformly continuous on the compact interval $[0, D]$. Thus, the composition $t \mapsto \|\phi^*_{\mu_t}\|_{\mathcal{H}}^2 = \mathfrak{K}(\mu_t \mid \pi)$ is uniformly continuous on $\mathbb{R}$, which concludes the proof.
 ```
 
 Along the mean-field SVGD flow, Lemma B.4′ applies to the mean-field curve.
@@ -1098,7 +1098,7 @@ Combined with Theorem A.11′ and Barbalat's lemma, Lemma B.4′ shows that the 
 
 ```informal SVGD.ksd_convergence'
 Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, with $H_0$ a Hilbert space. Let $\mu$ be a probability measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let $B \ge 0$ and let $m : \mathbb{R} \to \mathcal{H}$ be a continuous curve such that $\|m(t)\|_{\mathcal{H}} \le B$ for every $t \in \mathbb{R}$. Let $\mu_t = (X^m_{0, \cdot}(t))_\# \mu$ for $t \in \mathbb{R}$. Suppose that $m$ solves the mean-field equation from $\mu$, i.e.
-$$\forall t \ge 0, \ m(t) = \varphi^*_{\mu_t}.$$
+$$\forall t \ge 0, \ m(t) = \phi^*_{\mu_t}.$$
 Then,
 $$\mathfrak{K}(\mu_t \mid \pi) \xrightarrow[t \to \infty]{} 0.$$
 ```
@@ -1120,7 +1120,7 @@ $$\mathfrak{K}(\mu_t \mid \pi) \xrightarrow[t \to \infty]{} 0.$$
 
 ```proof SVGD.ksd_convergence
 As shown in the proof of Corollary B.5′, $\mu \in \mathcal{P}(\Omega)$. Let $m$ be the [mean-field SVGD curve](#SVGD.meanFieldCurve) from $\mu$, so that $T_t(x) = X^m_{0, x}(t)$. It is [continuous](#SVGD.continuous_meanFieldCurve) and [bounded](#SVGD.exists_norm_meanFieldCurve_le) by some $B \ge 0$. As $\mu \in \mathcal{P}(\Omega)$, the mean-field equation has a continuous solution with values in the closed convex hull of $\{\xi_x \mid x \in \Omega\}$, by the [existence theorem](#SVGD.exists_meanField). This hull is compact, hence bounded. Thus, a continuous bounded solution exists, and $m$ is one of them by definition, i.e.
-$$\forall t \ge 0, \ m(t) = \varphi^*_{\mu_t}.$$
+$$\forall t \ge 0, \ m(t) = \phi^*_{\mu_t}.$$
 Corollary B.5′ applied to $m$ concludes the proof.
 ```
 
@@ -1129,7 +1129,7 @@ Next, the discrepancy of every weak cluster point of the flow is null. The weak 
 {{SVGD.cluster_points' | Lemma B.6′}}
 
 ```informal SVGD.cluster_points'
-Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, with $H_0$ a Hilbert space. Let $\mu$ be a probability measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let $B \ge 0$ and let $m : \mathbb{R} \to \mathcal{H}$ be a continuous curve such that $\|m(t)\|_{\mathcal{H}} \le B$ for every $t \in \mathbb{R}$. Let $\mu_t = (X^m_{0, \cdot}(t))_\# \mu$ for $t \in \mathbb{R}$, and suppose that $m(t) = \varphi^*_{\mu_t}$ for every $t \ge 0$. Let $(t_n)_{n \in \mathbb{N}}$ be a real sequence such that $t_n \to \infty$, and let $\nu \in \mathcal{P}(\Omega)$ such that, for every function $g : \mathbb{R}^d \to \mathbb{R}$ continuous on $\Omega$,
+Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, with $H_0$ a Hilbert space. Let $\mu$ be a probability measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let $B \ge 0$ and let $m : \mathbb{R} \to \mathcal{H}$ be a continuous curve such that $\|m(t)\|_{\mathcal{H}} \le B$ for every $t \in \mathbb{R}$. Let $\mu_t = (X^m_{0, \cdot}(t))_\# \mu$ for $t \in \mathbb{R}$, and suppose that $m(t) = \phi^*_{\mu_t}$ for every $t \ge 0$. Let $(t_n)_{n \in \mathbb{N}}$ be a real sequence such that $t_n \to \infty$, and let $\nu \in \mathcal{P}(\Omega)$ such that, for every function $g : \mathbb{R}^d \to \mathbb{R}$ continuous on $\Omega$,
 $$\mathbb{E}_{x \sim \mu_{t_n}}[g(x)] \xrightarrow[n \to \infty]{} \mathbb{E}_{x \sim \nu}[g(x)].$$
 Then,
 $$\mathfrak{K}(\nu \mid \pi) = 0.$$
@@ -1137,18 +1137,18 @@ $$\mathfrak{K}(\nu \mid \pi) = 0.$$
 
 ```proof SVGD.cluster_points'
 As shown in the proof of Corollary B.5′, $\mu \in \mathcal{P}(\Omega)$. Thus, as shown in the proof of Lemma B.4′, $\mu_\tau \in \mathcal{P}(\Omega)$ for every $\tau \in \mathbb{R}$. We compute the limit of the sequence
-$$a_n = \langle \varphi^*_\nu, \varphi^*_{\mu_{t_n}} \rangle_{\mathcal{H}}$$
+$$a_n = \langle \phi^*_\nu, \phi^*_{\mu_{t_n}} \rangle_{\mathcal{H}}$$
 in two ways.
 
-**First limit.** As $\mu_{t_n} \in \mathcal{P}(\Omega)$, [Theorem A.7 (i)](#SVGD.steepest_trajectory_integral) gives $a_n = \mathbb{E}_{x \sim \mu_{t_n}}[\mathcal{A}_\pi \varphi^*_\nu(x)]$. The function $\mathcal{A}_\pi \varphi^*_\nu$ is [continuous](#SVGD.continuousOn_steinOperator) on $\Omega$. Thus, by hypothesis, and by Theorem A.7 (i) at $\nu \in \mathcal{P}(\Omega)$,
-$$a_n = \mathbb{E}_{x \sim \mu_{t_n}}[\mathcal{A}_\pi \varphi^*_\nu(x)] \xrightarrow[n \to \infty]{} \mathbb{E}_{x \sim \nu}[\mathcal{A}_\pi \varphi^*_\nu(x)] = \langle \varphi^*_\nu, \varphi^*_\nu \rangle_{\mathcal{H}} = \|\varphi^*_\nu\|_{\mathcal{H}}^2.$$
+**First limit.** As $\mu_{t_n} \in \mathcal{P}(\Omega)$, [Theorem A.7 (i)](#SVGD.steepest_trajectory_integral) gives $a_n = \mathbb{E}_{x \sim \mu_{t_n}}[\mathcal{A}_\pi \phi^*_\nu(x)]$. The function $\mathcal{A}_\pi \phi^*_\nu$ is [continuous](#SVGD.continuousOn_steinOperator) on $\Omega$. Thus, by hypothesis, and by Theorem A.7 (i) at $\nu \in \mathcal{P}(\Omega)$,
+$$a_n = \mathbb{E}_{x \sim \mu_{t_n}}[\mathcal{A}_\pi \phi^*_\nu(x)] \xrightarrow[n \to \infty]{} \mathbb{E}_{x \sim \nu}[\mathcal{A}_\pi \phi^*_\nu(x)] = \langle \phi^*_\nu, \phi^*_\nu \rangle_{\mathcal{H}} = \|\phi^*_\nu\|_{\mathcal{H}}^2.$$
 
 **Second limit.** By Corollary B.5′, and by [Theorem A.7 (iii)](#SVGD.steepest_trajectory_ksd) at $\mu_\tau \in \mathcal{P}(\Omega)$,
-$$\|\varphi^*_{\mu_\tau}\|_{\mathcal{H}}^2 = \mathfrak{K}(\mu_\tau \mid \pi) \xrightarrow[\tau \to \infty]{} 0.$$
-As the square root is continuous at $0$, $\|\varphi^*_{\mu_\tau}\|_{\mathcal{H}} \to 0$, i.e. $\varphi^*_{\mu_\tau} \to 0$ in $\mathcal{H}$ as $\tau \to \infty$. As $t_n \to \infty$, $\varphi^*_{\mu_{t_n}} \to 0$. By continuity of the inner product, $a_n \to \langle \varphi^*_\nu, 0 \rangle_{\mathcal{H}} = 0$. In [Serre2025], the same limit follows from the Cauchy–Schwarz inequality $|a_n| \le \|\varphi^*_\nu\|_{\mathcal{H}} \, \mathfrak{K}(\mu_{t_n} \mid \pi)^{1/2}$.
+$$\|\phi^*_{\mu_\tau}\|_{\mathcal{H}}^2 = \mathfrak{K}(\mu_\tau \mid \pi) \xrightarrow[\tau \to \infty]{} 0.$$
+As the square root is continuous at $0$, $\|\phi^*_{\mu_\tau}\|_{\mathcal{H}} \to 0$, i.e. $\phi^*_{\mu_\tau} \to 0$ in $\mathcal{H}$ as $\tau \to \infty$. As $t_n \to \infty$, $\phi^*_{\mu_{t_n}} \to 0$. By continuity of the inner product, $a_n \to \langle \phi^*_\nu, 0 \rangle_{\mathcal{H}} = 0$. In [Serre2025], the same limit follows from the Cauchy–Schwarz inequality $|a_n| \le \|\phi^*_\nu\|_{\mathcal{H}} \, \mathfrak{K}(\mu_{t_n} \mid \pi)^{1/2}$.
 
-**Conclusion.** By uniqueness of the limit, $\|\varphi^*_\nu\|_{\mathcal{H}}^2 = 0$. By Theorem A.7 (iii) at $\nu$,
-$$\mathfrak{K}(\nu \mid \pi) = \|\varphi^*_\nu\|_{\mathcal{H}}^2 = 0,$$
+**Conclusion.** By uniqueness of the limit, $\|\phi^*_\nu\|_{\mathcal{H}}^2 = 0$. By Theorem A.7 (iii) at $\nu$,
+$$\mathfrak{K}(\nu \mid \pi) = \|\phi^*_\nu\|_{\mathcal{H}}^2 = 0,$$
 which concludes the proof.
 ```
 
@@ -1170,7 +1170,7 @@ We can now prove the main result. Under Stein-universality, the flow converges w
 {{SVGD.weak_convergence' | Theorem 3.1′}}
 
 ```informal SVGD.weak_convergence'
-Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, with $H_0$ a Hilbert space. Suppose that the kernel is Stein-universal on $\Omega$. Let $\mu$ be a probability measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let $B \ge 0$ and let $m : \mathbb{R} \to \mathcal{H}$ be a continuous curve such that $\|m(t)\|_{\mathcal{H}} \le B$ for every $t \in \mathbb{R}$. Let $\mu_t = (X^m_{0, \cdot}(t))_\# \mu$ for $t \in \mathbb{R}$, and suppose that $m(t) = \varphi^*_{\mu_t}$ for every $t \ge 0$. Then, for every function $g : \mathbb{R}^d \to \mathbb{R}$ continuous on $\Omega$,
+Let $\Omega, \pi, p, s, \Phi, K, C$ satisfy the standing assumptions, with $H_0$ a Hilbert space. Suppose that the kernel is Stein-universal on $\Omega$. Let $\mu$ be a probability measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\mu \,\|\, \pi) < \infty$. Let $B \ge 0$ and let $m : \mathbb{R} \to \mathcal{H}$ be a continuous curve such that $\|m(t)\|_{\mathcal{H}} \le B$ for every $t \in \mathbb{R}$. Let $\mu_t = (X^m_{0, \cdot}(t))_\# \mu$ for $t \in \mathbb{R}$, and suppose that $m(t) = \phi^*_{\mu_t}$ for every $t \ge 0$. Then, for every function $g : \mathbb{R}^d \to \mathbb{R}$ continuous on $\Omega$,
 $$\mathbb{E}_{x \sim \mu_t}[g(x)] \xrightarrow[t \to \infty]{} \mathbb{E}_{x \sim \pi}[g(x)].$$
 ```
 
