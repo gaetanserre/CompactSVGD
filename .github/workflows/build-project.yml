@@ -64,9 +64,9 @@ jobs:
           sudo apt-get install -y bubblewrap
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
-      # The website, written to `_site/index.html` (see `showcase/showcase.md`). On a push, `lake
-      # comparator` runs first, in its sandbox, and the website shows its verdict. The manifest of
-      # `showcase/` is resolved here, so that it takes the dependencies of the project.
+      # The website, written to `_site/` with its figures (see `showcase/showcase.md`). On a push,
+      # `lake comparator` runs first, in its sandbox, and the website shows its verdict. The
+      # manifest of `showcase/` is resolved here, so that it takes the dependencies of the project.
       - name: Build the website
         working-directory: showcase
         run: |

@@ -17,7 +17,7 @@ can be checked by hand in one place: all the other files only contain lemmas. To
 of `CompactSVGD/Paper.lean`, one only needs to trust Mathlib, this file, and the definitions and
 statements of `CompactSVGD/Paper.lean`.
 
-The first definitions are general; their API is in `CompactSVGD/ForMathlib/`. The next ones are the
+The first definitions are general; their API is in `CompactSVGD/Utils/`. The next ones are the
 vector fields of a feature map `Φ : ℝᵈ → H₀`, for the kernel `k(x, y) = ⟪Φ x, Φ y⟫` of SVGD, and
 their trajectories. Their lemmas are in `CompactSVGD/FeatureMap/`.
 

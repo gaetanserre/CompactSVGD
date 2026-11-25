@@ -7,12 +7,12 @@ module
 
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.DataProcessing
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Reweighting
-import CompactSVGD.ForMathlib.MeasureTheory.Function.Jacobian
-import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
-import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Basic
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.DataProcessing
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Reweighting
+import CompactSVGD.Utils.MeasureTheory.Function.Jacobian
+import CompactSVGD.Utils.MeasureTheory.Function.LocallyIntegrable
+import CompactSVGD.Utils.MeasureTheory.Measure.WithDensity
 import TauCeti.Analysis.Calculus.FDeriv.Measurable
 
 /-!

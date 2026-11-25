@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Analysis.ODE.Basic
 
-import CompactSVGD.ForMathlib.Analysis.ODE.Gronwall
+import CompactSVGD.Utils.Analysis.ODE.Gronwall
 
 /-!
 # Differentiability of solutions of ODEs with respect to the initial condition

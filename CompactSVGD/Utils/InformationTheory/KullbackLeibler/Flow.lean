@@ -8,14 +8,14 @@ module
 public import CompactSVGD.Definitions
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
-import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
-import CompactSVGD.ForMathlib.Analysis.ODE.FlowJacobian
-import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
-import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Transport
-import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
+import CompactSVGD.Utils.Analysis.Calculus.Divergence
+import CompactSVGD.Utils.Analysis.ODE.FlowHomeomorph
+import CompactSVGD.Utils.Analysis.ODE.FlowJacobian
+import CompactSVGD.Utils.Analysis.ODE.Invariance
+import CompactSVGD.Utils.Analysis.SpecialFunctions.Log.Deriv
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Basic
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Transport
+import CompactSVGD.Utils.MeasureTheory.Function.LocallyIntegrable
 import Mathlib.Analysis.Calculus.ParametricIntegral
 import TauCeti.Analysis.Calculus.FDeriv.Measurable
 
@@ -33,10 +33,6 @@ equation or time regularity is needed for `μₜ`.
 * `InformationTheory.klDiv_map_flow_ne_top`: the divergence stays finite along the flow.
 * `InformationTheory.hasDerivAt_toReal_klDiv_map_flow`: **the dissipation of the
   Kullback–Leibler divergence**.
-
-## References
-
-* [G. Serré, A. Kalogeratos, N. Vayatis, *Stein Boltzmann Sampling*][Serre2025], Theorem A.11
 -/
 
 @[expose] public section
@@ -95,10 +91,9 @@ theorem klDiv_map_flow_ne_top (t : ℝ) :
   have := klDiv_map_ne_top hΩ hp hpc hp₀ h₁ h₂ h₃ h₄ hμ
   rwa [he] at this
 
-/-- **The dissipation of the Kullback–Leibler divergence along a flow** (proof of Theorem A.11 of
-[Serre2025]). Let
-`π = p · vol|_Ω` as above, let `α` be the flow of a vector field `v` vanishing on the frontier of
-`Ω`, and let `μ` be a finite measure with `KL(μ ‖ π) < ∞`. Then `μₜ = (α · t)#μ` satisfies
+/-- **The dissipation of the Kullback–Leibler divergence along a flow.** Let `π = p · vol|_Ω` as
+above, let `α` be the flow of a vector field `v` vanishing on the frontier of `Ω`, and let `μ` be
+a finite measure with `KL(μ ‖ π) < ∞`. Then `μₜ = (α · t)#μ` satisfies
 `∂ₜ KL(μₜ ‖ π) = -E_{μₜ}[𝒜_s vₜ]` at every time `t`, where `𝒜_s vₜ = s(vₜ) + div vₜ` is the Stein
 operator. -/
 theorem hasDerivAt_toReal_klDiv_map_flow {s : E → StrongDual ℝ E}

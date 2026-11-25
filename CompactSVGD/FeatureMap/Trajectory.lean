@@ -12,12 +12,12 @@ public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
 
 import CompactSVGD.FeatureMap.VectorField
-import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
-import CompactSVGD.ForMathlib.Analysis.ODE.FlowJacobian
-import CompactSVGD.ForMathlib.Analysis.ODE.Global
-import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Flow
-import CompactSVGD.ForMathlib.MeasureTheory.Integral.Map
+import CompactSVGD.Utils.Analysis.ODE.FlowHomeomorph
+import CompactSVGD.Utils.Analysis.ODE.FlowJacobian
+import CompactSVGD.Utils.Analysis.ODE.Global
+import CompactSVGD.Utils.Analysis.ODE.Invariance
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Flow
+import CompactSVGD.Utils.MeasureTheory.Integral.Map
 import Mathlib.Analysis.ODE.Transform
 import TauCeti.Analysis.InnerProductSpace.Trace.OpNorm
 

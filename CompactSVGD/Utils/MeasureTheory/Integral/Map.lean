@@ -7,7 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.Integral.Bochner.Basic
 
-import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
+import CompactSVGD.Utils.MeasureTheory.Function.LocallyIntegrable
 
 /-!
 # Integrals against push-forward measures

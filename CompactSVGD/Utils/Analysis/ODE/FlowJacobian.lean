@@ -8,11 +8,11 @@ module
 public import CompactSVGD.Definitions
 public import TauCeti.Topology.Algebra.Module.Trace
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
-import CompactSVGD.ForMathlib.Analysis.ODE.Global
-import CompactSVGD.ForMathlib.Analysis.ODE.InitialCondition
-import CompactSVGD.ForMathlib.Analysis.ODE.Liouville
-import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
+import CompactSVGD.Utils.Analysis.Calculus.Divergence
+import CompactSVGD.Utils.Analysis.ODE.Global
+import CompactSVGD.Utils.Analysis.ODE.InitialCondition
+import CompactSVGD.Utils.Analysis.ODE.Liouville
+import CompactSVGD.Utils.Analysis.SpecialFunctions.Log.Deriv
 
 /-!
 # The Jacobian of a flow

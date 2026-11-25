@@ -10,8 +10,8 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public import Mathlib.LinearAlgebra.Determinant
 public import Mathlib.LinearAlgebra.Trace
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.DetIdAddSMul
-import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
+import CompactSVGD.Utils.Analysis.Calculus.FDeriv.DetIdAddSMul
+import CompactSVGD.Utils.Analysis.SpecialFunctions.Log.Deriv
 import Mathlib.Analysis.ODE.ExistUnique
 import TauCeti.Analysis.Calculus.FDeriv.Det.Basic
 

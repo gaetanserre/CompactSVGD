@@ -7,8 +7,8 @@ module
 
 public import CompactSVGD.Definitions
 
-import CompactSVGD.ForMathlib.Analysis.ODE.Global
-import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
+import CompactSVGD.Utils.Analysis.ODE.Global
+import CompactSVGD.Utils.Analysis.ODE.Invariance
 
 /-!
 # The flow maps of a Lipschitz vector field

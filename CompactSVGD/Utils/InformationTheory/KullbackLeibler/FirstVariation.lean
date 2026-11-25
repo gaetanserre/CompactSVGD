@@ -8,13 +8,13 @@ module
 public import CompactSVGD.Definitions
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
-import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.DetIdAddSMul
-import CompactSVGD.ForMathlib.Analysis.Normed.PerturbationOfIdentity
-import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Transport
-import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
+import CompactSVGD.Utils.Analysis.Calculus.Divergence
+import CompactSVGD.Utils.Analysis.Calculus.FDeriv.DetIdAddSMul
+import CompactSVGD.Utils.Analysis.Normed.PerturbationOfIdentity
+import CompactSVGD.Utils.Analysis.SpecialFunctions.Log.Deriv
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Basic
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Transport
+import CompactSVGD.Utils.MeasureTheory.Function.LocallyIntegrable
 import Mathlib.Analysis.Calculus.ParametricIntegral
 import TauCeti.Analysis.Calculus.FDeriv.Det.Basic
 
@@ -37,7 +37,6 @@ vanishing on the frontier of `Ω`, and `μ` a finite measure with `KL(μ ‖ π)
 ## References
 
 * [Q. Liu, D. Wang, *Stein Variational Gradient Descent*][Liu2016SVGD]
-* [G. Serré, A. Kalogeratos, N. Vayatis, *Stein Boltzmann Sampling*][Serre2025], Theorem A.8
 -/
 
 @[expose] public section
@@ -145,13 +144,12 @@ theorem toReal_klDiv_map_add_smul (hε : ‖ε‖₊ * K < 1)
   have h := toReal_klDiv_map_eq hΩ hp hpc hp₀ hed himage (he ▸ hdet) hdetμ hμ
   simpa only [he] using h
 
-/-- **The first variation of the Kullback–Leibler divergence** (proof of Theorem A.8 of
-[Serre2025]). Let `π = p · vol|_Ω`, with `Ω` compact, `p` continuous and positive on `Ω`, and
-`log p` differentiable in the interior of `Ω` with derivative `s`, continuous on `Ω`. Let `v` be a
-`C¹` Lipschitz vector field vanishing on the frontier of `Ω`, and let `μ` be a finite measure with
-`KL(μ ‖ π) < ∞`. Then
-`ε ↦ KL((I + ε v)#μ ‖ π)` has derivative `-E_μ[𝒜_s v]` at `0`, where
-`𝒜_s v = s(v) + div v` is the Stein operator. -/
+/-- **The first variation of the Kullback–Leibler divergence.** Let `π = p · vol|_Ω`, with `Ω`
+compact, `p` continuous and positive on `Ω`, and `log p` differentiable in the interior of `Ω` with
+derivative `s`, continuous on `Ω`. Let `v` be a `C¹` Lipschitz vector field vanishing on the
+frontier of `Ω`, and let `μ` be a finite measure with `KL(μ ‖ π) < ∞`. Then
+`ε ↦ KL((I + ε v)#μ ‖ π)` has derivative `-E_μ[𝒜_s v]` at `0`, where `𝒜_s v = s(v) + div v` is the
+Stein operator. -/
 theorem hasDerivAt_toReal_klDiv_map_add_smul {s : E → StrongDual ℝ E}
     (hs : ∀ x ∈ interior Ω, HasFDerivAt (fun y ↦ log (p y)) (s x) x) (hsc : ContinuousOn s Ω) :
     HasDerivAt (fun ε : ℝ ↦ (klDiv (μ.map fun x ↦ x + ε • v x)

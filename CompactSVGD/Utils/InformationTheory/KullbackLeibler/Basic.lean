@@ -7,7 +7,7 @@ module
 
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
-import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
+import CompactSVGD.Utils.MeasureTheory.Measure.WithDensity
 
 /-!
 # Measures at finite Kullback–Leibler divergence
