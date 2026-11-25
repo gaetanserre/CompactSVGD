@@ -398,7 +398,7 @@ $K$ and $C$.
 Most results below take the standing assumptions. Some of them also assume that $H_0$ is complete,
 i.e. a Hilbert space. Then, so is $\mathcal{H}$.
 
-### The kernelized Stein discrepancy
+### Definition of the kernelized Stein discrepancy
 
 The kernelized Stein discrepancy is the Stein discrepancy of the vector fields $f_\Phi$ of the
 closed unit ball of $\mathcal{H}$.
