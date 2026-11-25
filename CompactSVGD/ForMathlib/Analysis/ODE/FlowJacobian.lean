@@ -6,6 +6,7 @@ Authors: Gaëtan Serré
 module
 
 public import CompactSVGD.Definitions
+public import TauCeti.Topology.Algebra.Module.Trace
 
 import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
 import CompactSVGD.ForMathlib.Analysis.ODE.Global
@@ -50,7 +51,7 @@ variable [FiniteDimensional ℝ E]
 
 /-- The bound `|div (v t)| ≤ ‖trace‖ K`, with an `ℝ≥0` constant. -/
 private theorem abs_divergence_le (hvK : ∀ t, LipschitzWith K (v t)) (t : ℝ) (y : E) :
-    |divergence ℝ (v t) y| ≤ (‖ContinuousLinearMap.traceCLM ℝ E‖₊ * K : ℝ≥0) := by
+    |divergence ℝ (v t) y| ≤ (‖TauCeti.traceCLM ℝ E‖₊ * K : ℝ≥0) := by
   rw [← Real.norm_eq_abs, NNReal.coe_mul, coe_nnNorm]
   exact norm_divergence_le_of_lipschitz (hvK t) y
 
@@ -72,10 +73,10 @@ private theorem exists_hasFDerivAt_flow (x : E) :
       rw [dist_eq_norm, dist_eq_norm, ← ContinuousLinearMap.comp_sub]
       exact (ContinuousLinearMap.opNorm_comp_le _ _).trans
         (by gcongr; exact (hv t _).le_of_lipschitz (hvK t))
-  set J := globalSolution (fun t A ↦ (Dv t (α x t)).comp A) s (ContinuousLinearMap.id ℝ E)
+  set J := integralCurveThrough (fun t A ↦ (Dv t (α x t)).comp A) s (ContinuousLinearMap.id ℝ E)
   have hJ (t : ℝ) : HasDerivAt J ((Dv t (α x t)).comp (J t)) t :=
-    isIntegralCurve_globalSolution hc hL s _ t
-  have hJ₀ : J s = ContinuousLinearMap.id ℝ E := globalSolution_self hc hL s _
+    isIntegralCurve_integralCurveThrough hc hL s _ t
+  have hJ₀ : J s = ContinuousLinearMap.id ℝ E := integralCurveThrough_self hc hL s _
   exact ⟨J, hJ, hasFDerivAt_apply_of_hasDerivAt_variational hv hDv hvK hα hα₀ hJ hJ₀⟩
 
 /-- The flow maps are differentiable. -/
@@ -120,7 +121,7 @@ theorem hasDerivAt_log_det_fderiv_flow (x : E) (t : ℝ) :
 /-- The logarithm of the Jacobian determinant of the flow grows at most linearly:
 `|log det D(α · t) x| ≤ ‖trace‖ K |t - s|`. -/
 theorem abs_log_det_fderiv_flow_le (x : E) (t : ℝ) :
-    |Real.log (fderiv ℝ (α · t) x).det| ≤ ‖ContinuousLinearMap.traceCLM ℝ E‖ * K * |t - s| := by
+    |Real.log (fderiv ℝ (α · t) x).det| ≤ ‖TauCeti.traceCLM ℝ E‖ * K * |t - s| := by
   have := abs_log_sub_log_le_of_hasDerivAt_mul (hasDerivAt_det_fderiv_flow hv hDv hvK hα hα₀ x)
     (fun t ↦ abs_divergence_le hvK t _) (s := s)
     (by rw [det_fderiv_flow_self hα₀]; exact one_pos) t

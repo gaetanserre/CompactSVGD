@@ -10,10 +10,10 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public import Mathlib.LinearAlgebra.Determinant
 public import Mathlib.LinearAlgebra.Trace
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.ContDiff.FiniteDimension
 import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.DetIdAddSMul
 import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
 import Mathlib.Analysis.ODE.ExistUnique
+import TauCeti.Analysis.Calculus.FDeriv.Det.Basic
 
 /-!
 # Liouville's formula
@@ -44,7 +44,7 @@ theorem hasDerivAt_det_of_hasDerivAt_comp {𝕜 : Type*} [NontriviallyNormedFiel
     {J : 𝕜 → E →L[𝕜] E} {A : E →L[𝕜] E} {t : 𝕜} (hJ : HasDerivAt J (A.comp (J t)) t) :
     HasDerivAt (fun t ↦ (J t).det) (LinearMap.trace 𝕜 E A * (J t).det) t := by
   have hdet : Differentiable 𝕜 fun B : E →L[𝕜] E ↦ LinearMap.det (B : E →ₗ[𝕜] E) :=
-    (ContinuousLinearMap.contDiff_det (𝕜 := 𝕜) (E := E) (n := 1)).differentiable one_ne_zero
+    (ContinuousLinearMap.contDiff_det (𝕜 := 𝕜) (E := E) (r := 1)).differentiable one_ne_zero
   -- Along the curve `P τ = (id + (τ - t) • A) ∘ J t`, which has the same derivative as `J` at `t`,
   -- the determinant is `det (id + (τ - t) • A) * det (J t)`.
   set P : 𝕜 → E →L[𝕜] E := fun τ ↦ (ContinuousLinearMap.id 𝕜 E + (τ - t) • A).comp (J t)

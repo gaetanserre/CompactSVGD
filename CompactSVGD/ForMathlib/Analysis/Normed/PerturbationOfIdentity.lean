@@ -7,15 +7,15 @@ module
 
 public import Mathlib.Analysis.Normed.Module.Basic
 
-import CompactSVGD.ForMathlib.Topology.Connected.Basic
-import Mathlib.Topology.MetricSpace.Contracting
+import TauCeti.Geometry.Manifold.Diffeomorph.Perturbation
+import TauCeti.Topology.Frontier
 
 /-!
 # Lipschitz perturbations of the identity
 
-Let `u : E → E` be `K`-Lipschitz with `K < 1` on a complete normed group. Then `x ↦ x + u x` is
-antilipschitz, and onto by Banach's fixed-point theorem, so it is a homeomorphism
-(`LipschitzWith.exists_homeomorph_id_add`). If `u` vanishes on the frontier of a set `s`, then
+Let `u : E → E` be `K`-Lipschitz with `K < 1` on a real Banach space. Then `x ↦ x + u x` is a
+homeomorphism, `LipschitzWith.idAddHomeomorph` of Tau Ceti. If `u` vanishes on the frontier of a
+set `s`, then
 `x ↦ x + u x` maps `s` into `s`, and onto `s`. Indeed, a point of `s` sent outside `s` would cross
 the frontier of `s` along the segment `τ ↦ x + τ • u x`, at a point fixed by `y ↦ y + τ • u y`,
 which contradicts injectivity.
@@ -23,13 +23,10 @@ which contradicts injectivity.
 ## Main statements
 
 * `LipschitzWith.add_mem_of_forall_frontier_eq_zero`: `x + u x ∈ s` for every `x ∈ s`.
-* `LipschitzWith.exists_homeomorph_id_add`: `x ↦ x + u x` is a homeomorphism.
 * `LipschitzWith.image_add_eq_of_forall_frontier_eq_zero`: `x ↦ x + u x` maps `s` onto `s`.
-
-## Implementation notes
-
-Mathlib's `ApproximatesLinearOn.toHomeomorph` gives the same homeomorphism, but needs a normed
-space structure over a field. The construction by Banach's fixed-point theorem does not.
+* `LipschitzWith.exists_homeomorph_id_add_smul`,
+  `LipschitzWith.image_add_smul_eq_of_forall_frontier_eq_zero`: `x ↦ x + ε • v x` is a
+  homeomorphism, which maps `s` onto `s`.
 -/
 
 @[expose] public section
@@ -39,32 +36,6 @@ open Set
 open scoped NNReal
 
 namespace LipschitzWith
-
-section Homeomorph
-
-theorem antilipschitzWith_id_add {E : Type*} [SeminormedAddCommGroup E] {u : E → E} {K : ℝ≥0}
-    (hu : LipschitzWith K u) (hK : K < 1) : AntilipschitzWith (1 - K)⁻¹ fun x ↦ x + u x := by
-  simpa using AntilipschitzWith.id.add_lipschitzWith hu (by simpa using hK)
-
-variable {E : Type*} [NormedAddCommGroup E] {u : E → E} {K : ℝ≥0}
-
-theorem surjective_id_add [CompleteSpace E] (hu : LipschitzWith K u) (hK : K < 1) :
-    Function.Surjective fun x ↦ x + u x := fun y ↦ by
-  -- A solution of `x + u x = y` is a fixed point of the contraction `x ↦ y - u x`.
-  have hc : ContractingWith K fun x ↦ y - u x :=
-    ⟨hK, ((LipschitzWith.const y).sub hu).weaken (by simp)⟩
-  exact ⟨_, eq_sub_iff_add_eq.1 hc.fixedPoint_isFixedPt.symm⟩
-
-/-- **A Lipschitz-small perturbation of the identity is a homeomorphism.** If `u` is `K`-Lipschitz
-with `K < 1` on a complete normed group, then `x ↦ x + u x` is a homeomorphism. -/
-theorem exists_homeomorph_id_add [CompleteSpace E] (hu : LipschitzWith K u) (hK : K < 1) :
-    ∃ e : E ≃ₜ E, ⇑e = fun x ↦ x + u x :=
-  ⟨(Equiv.ofBijective _ ⟨(hu.antilipschitzWith_id_add hK).injective,
-    hu.surjective_id_add hK⟩).toHomeomorphOfIsInducing
-    ((hu.antilipschitzWith_id_add hK).isUniformInducing
-      (uniformContinuous_id.add hu.uniformContinuous)).isInducing, rfl⟩
-
-end Homeomorph
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {u v : E → E} {K : ℝ≥0} {s : Set E}
   {x : E} {ε : ℝ}
@@ -99,7 +70,9 @@ theorem image_add_eq_of_forall_frontier_eq_zero [CompleteSpace E]
     (fun x ↦ x + u x) '' s = s := by
   refine (image_subset_iff.2 fun x hx ↦ hu.add_mem_of_forall_frontier_eq_zero hK h₀ hx).antisymm
     fun y hy ↦ ?_
-  obtain ⟨x, rfl⟩ := hu.surjective_id_add hK y
+  obtain ⟨x, hxy⟩ := (hu.idAddHomeomorph ℝ hK).surjective y
+  rw [coe_idAddHomeomorph] at hxy
+  subst hxy
   -- The complement of `s` has the same frontier, so it is invariant too.
   refine ⟨x, by_contra fun hx ↦ ?_, by simp⟩
   exact hu.add_mem_of_forall_frontier_eq_zero hK (s := sᶜ)
@@ -110,5 +83,17 @@ theorem add_smul_mem_of_forall_frontier_eq_zero (hv : LipschitzWith K v) (hε : 
     (h₀ : ∀ y ∈ frontier s, v y = 0) (hx : x ∈ s) : x + ε • v x ∈ s :=
   ((lipschitzWith_smul ε).comp hv).add_mem_of_forall_frontier_eq_zero hε
     (fun y hy ↦ by simp [h₀ y hy]) hx
+
+/-- The case `u = ε • v` of `LipschitzWith.idAddHomeomorph`. -/
+theorem exists_homeomorph_id_add_smul [CompleteSpace E] (hv : LipschitzWith K v)
+    (hε : ‖ε‖₊ * K < 1) : ∃ e : E ≃ₜ E, ⇑e = fun x ↦ x + ε • v x :=
+  have hu : LipschitzWith (‖ε‖₊ * K) fun x ↦ ε • v x := (lipschitzWith_smul ε).comp hv
+  ⟨hu.idAddHomeomorph ℝ hε, hu.coe_idAddHomeomorph ℝ hε⟩
+
+/-- The case `u = ε • v` of `LipschitzWith.image_add_eq_of_forall_frontier_eq_zero`. -/
+theorem image_add_smul_eq_of_forall_frontier_eq_zero [CompleteSpace E] (hv : LipschitzWith K v)
+    (hε : ‖ε‖₊ * K < 1) (h₀ : ∀ y ∈ frontier s, v y = 0) : (fun x ↦ x + ε • v x) '' s = s :=
+  have hu : LipschitzWith (‖ε‖₊ * K) fun x ↦ ε • v x := (lipschitzWith_smul ε).comp hv
+  hu.image_add_eq_of_forall_frontier_eq_zero hε fun y hy ↦ by simp [h₀ y hy]
 
 end LipschitzWith

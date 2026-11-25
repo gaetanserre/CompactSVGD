@@ -12,7 +12,6 @@ public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
 
 import CompactSVGD.FeatureMap.VectorField
-import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.Trace
 import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
 import CompactSVGD.ForMathlib.Analysis.ODE.FlowJacobian
 import CompactSVGD.ForMathlib.Analysis.ODE.Global
@@ -20,6 +19,7 @@ import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Flow
 import CompactSVGD.ForMathlib.MeasureTheory.Integral.Map
 import Mathlib.Analysis.ODE.Transform
+import TauCeti.Analysis.InnerProductSpace.Trace.OpNorm
 
 /-!
 # Trajectories of the vector field of a curve
@@ -73,24 +73,24 @@ variable (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B) (hΦK : LipschitzWit
 include hm hmB hΦK
 
 theorem trajectory_self (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) : trajectory Φ m s x s = x :=
-  ODE.globalSolution_self (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s x
+  ODE.integralCurveThrough_self (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB) s x
 
 theorem hasDerivAt_trajectory (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
     HasDerivAt (trajectory Φ m s x) (toVectorField Φ (m t) (trajectory Φ m s x t)) t :=
-  ODE.isIntegralCurve_globalSolution (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s x t
+  ODE.isIntegralCurve_integralCurveThrough (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB) s x t
 
 theorem continuous_trajectory (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
     Continuous (trajectory Φ m s x) :=
-  ODE.continuous_globalSolution (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s x
+  ODE.continuous_integralCurveThrough (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB) s x
 
 /-- **The flow property.** -/
 theorem trajectory_trajectory (s t : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
     trajectory Φ m t (trajectory Φ m s x t) = trajectory Φ m s x :=
-  funext fun τ ↦ ODE.globalSolution_globalSolution (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s t τ x
+  funext fun τ ↦ ODE.integralCurveThrough_integralCurveThrough (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB) s t τ x
 
 /-- Moving along a trajectory and back is the identity. -/
 theorem trajectory_trajectory_apply (s t : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
@@ -110,19 +110,19 @@ theorem lipschitzWith_trajectory (hΦC : ∀ y, ‖Φ y‖ ≤ C) (s : ℝ) (x :
 `x ↦ trajectory Φ m s x t` is a homeomorphism of `ℝᵈ`. -/
 theorem isHomeomorph_trajectory (s t : ℝ) : IsHomeomorph (trajectory Φ m s · t) :=
   ODE.isHomeomorph_flow (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (lipschitzWith_toVectorField_apply hΦK hmB)
     (hasDerivAt_trajectory hm hmB hΦK s) (trajectory_self hm hmB hΦK s) t
 
 /-- The time-`t` map of the flow is continuous. -/
 theorem continuous_trajectory_apply (s t : ℝ) : Continuous fun x ↦ trajectory Φ m s x t :=
-  ODE.continuous_globalSolution_apply (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s t
+  ODE.continuous_integralCurveThrough_apply (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB) s t
 
 /-- **Invariance of `Ω`.** If `Φ` vanishes on the frontier of `Ω`, trajectories that meet `Ω`
 stay in `Ω` at all times. -/
 theorem trajectory_mem {Ω : Set (EuclideanSpace ℝ (Fin d))} (hΦΩ : ∀ y ∈ frontier Ω, Φ y = 0)
     {s : ℝ} {x : EuclideanSpace ℝ (Fin d)} (hx : x ∈ Ω) (t : ℝ) : trajectory Φ m s x t ∈ Ω :=
-  ODE.mem_of_forall_frontier_eq_zero (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+  ODE.mem_of_forall_frontier_eq_zero (lipschitzWith_toVectorField_apply hΦK hmB)
     (fun _ y hy ↦ toVectorField_eq_zero_of_eq_zero (hΦΩ y hy))
     (hasDerivAt_trajectory hm hmB hΦK s x) (t₀ := s) (by rwa [trajectory_self hm hmB hΦK]) t
 
@@ -139,14 +139,14 @@ theorem ae_map_trajectory_mem {Ω : Set (EuclideanSpace ℝ (Fin d))} (hΩ : Mea
 theorem trajectory_comp_add (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (r : ℝ) :
     trajectory Φ (fun r ↦ m (r + s)) 0 x r = trajectory Φ m s x (r + s) := by
   have hm' : Continuous fun r ↦ m (r + s) := hm.comp (continuous_id.add continuous_const)
-  have h := IsIntegralCurve.comp_add (ODE.isIntegralCurve_globalSolution
+  have h := IsIntegralCurve.comp_add (ODE.isIntegralCurve_integralCurveThrough
     (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t)) s x) s
-  have h₀ := h.eq_globalSolution (continuous_toVectorField_apply hm')
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB (t + s))) 0
+    (lipschitzWith_toVectorField_apply hΦK hmB) s x) s
+  have h₀ := h.eq_integralCurveThrough (continuous_toVectorField_apply hm')
+    (lipschitzWith_toVectorField_apply hΦK fun t ↦ hmB (t + s)) 0
   simp only [Function.comp_def, zero_add] at h₀
-  rw [ODE.globalSolution_self (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))] at h₀
+  rw [ODE.integralCurveThrough_self (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB)] at h₀
   exact (congrFun h₀ r).symm
 
 /-- Two curves that agree between times `s` and `t` have the same trajectories from time `s` to
@@ -154,10 +154,10 @@ time `t`. -/
 theorem trajectory_eq_of_eqOn (hm' : Continuous m') (hmB' : ∀ t, ‖m' t‖ ≤ B) {s t : ℝ}
     (hmm' : EqOn m m' (uIcc s t)) (x : EuclideanSpace ℝ (Fin d)) :
     trajectory Φ m s x t = trajectory Φ m' s x t :=
-  ODE.globalSolution_eq_of_eqOn (continuous_toVectorField_apply hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+  ODE.integralCurveThrough_eq_of_eqOn (continuous_toVectorField_apply hm)
+    (lipschitzWith_toVectorField_apply hΦK hmB)
     (continuous_toVectorField_apply hm')
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB' t))
+    (lipschitzWith_toVectorField_apply hΦK hmB')
     (fun _ hτ ↦ congrArg (toVectorField Φ) (hmm' hτ)) x
 
 /-- **Continuous dependence on the curve.** Let `Φ` be bounded by `C` and let `m'` be another
@@ -172,7 +172,7 @@ theorem dist_trajectory_trajectory_le_of_dist_le (hΦC : ∀ y, ‖Φ y‖ ≤ C
       gronwallBound 0 (B * K) (C * δ) (t - s) := by
   have := dist_le_of_approx_trajectories_ODE (v := fun t ↦ toVectorField Φ (m t)) (a := s)
     (b := t) (εf := 0) (εg := C * δ) (δ := 0)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
+    (lipschitzWith_toVectorField_apply hΦK hmB)
     (continuous_trajectory hm hmB hΦK s x).continuousOn
     (fun t _ ↦ (hasDerivAt_trajectory hm hmB hΦK s x t).hasDerivWithinAt)
     (fun t _ ↦ by simp)
@@ -247,45 +247,47 @@ variable (hΦ : ContDiff ℝ 1 Φ) (hΦK : LipschitzWith K Φ) (hm : Continuous 
 include hΦ hΦK hm hmB
 
 /-- The flow maps of `m` are differentiable. -/
-theorem differentiable_trajectory_apply (t : ℝ) : Differentiable ℝ (trajectory Φ m 0 · t) :=
+theorem differentiable_trajectory_apply (s t : ℝ) : Differentiable ℝ (trajectory Φ m s · t) :=
   ODE.differentiable_flow
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) t
+    (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasDerivAt_trajectory hm hmB hΦK s) (trajectory_self hm hmB hΦK s) t
 
 /-- The Jacobian determinant of the flow maps of `m` is positive. -/
-theorem det_fderiv_trajectory_pos (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
-    0 < (fderiv ℝ (trajectory Φ m 0 · t) x).det :=
+theorem det_fderiv_trajectory_pos (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    0 < (fderiv ℝ (trajectory Φ m s · t) x).det :=
   ODE.det_fderiv_flow_pos
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
+    (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasDerivAt_trajectory hm hmB hΦK s) (trajectory_self hm hmB hΦK s) x t
 
 /-- **Liouville's formula** along the flow of `m`: `∂ₜ log Jₜ(x) = div vₜ (Tₜ x)`, where `Jₜ` is the
 Jacobian determinant of the flow map `Tₜ` and `vₜ` is the vector field of `m t`. -/
-theorem hasDerivAt_log_det_fderiv_trajectory (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
-    HasDerivAt (fun t ↦ Real.log (fderiv ℝ (trajectory Φ m 0 · t) x).det)
-      (divergence ℝ (toVectorField Φ (m t)) (trajectory Φ m 0 x t)) t :=
+theorem hasDerivAt_log_det_fderiv_trajectory (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    HasDerivAt (fun t ↦ Real.log (fderiv ℝ (trajectory Φ m s · t) x).det)
+      (divergence ℝ (toVectorField Φ (m t)) (trajectory Φ m s x t)) t :=
   ODE.hasDerivAt_log_det_fderiv_flow
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
+    (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasDerivAt_trajectory hm hmB hΦK s) (trajectory_self hm hmB hΦK s) x t
 
 /-- The logarithm of the Jacobian determinant of the flow maps of `m` grows at most linearly:
-`|log Jₜ(x)| ≤ d B K |t|`. -/
-theorem abs_log_det_fderiv_trajectory_le (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
-    |Real.log (fderiv ℝ (trajectory Φ m 0 · t) x).det| ≤ d * (B * K) * |t| := by
+`|log Jₜ(x)| ≤ d B K |t - s|`. -/
+theorem abs_log_det_fderiv_trajectory_le (s : ℝ) (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    |Real.log (fderiv ℝ (trajectory Φ m s · t) x).det| ≤ d * (B * K) * |t - s| := by
   have h := ODE.abs_log_det_fderiv_flow_le
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
-    (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) x t
-  rw [sub_zero, NNReal.coe_mul] at h
-  refine h.trans (by gcongr; simpa using
-    ContinuousLinearMap.norm_traceCLM_le (E := EuclideanSpace ℝ (Fin d)))
+    (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasDerivAt_trajectory hm hmB hΦK s) (trajectory_self hm hmB hΦK s) x t
+  rw [NNReal.coe_mul] at h
+  have htr : ‖TauCeti.traceCLM ℝ (EuclideanSpace ℝ (Fin d))‖ ≤ d := by
+    refine ContinuousLinearMap.opNorm_le_bound _ (by positivity) fun L ↦ ?_
+    simpa using ContinuousLinearMap.norm_traceCLM_le L
+  exact h.trans (by gcongr)
 
 end Jacobian
 
@@ -309,8 +311,8 @@ theorem klDiv_map_trajectory_ne_top (t : ℝ) :
     klDiv (μ.map (trajectory Φ m 0 · t))
       ((volume.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) ≠ ∞ :=
   InformationTheory.klDiv_map_flow_ne_top hΩ hp hpc hp₀
-    (continuous_toVectorField_apply hm) (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_toVectorField_apply hm) (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
     (fun _ y hy ↦ toVectorField_eq_zero_of_eq_zero (hΦΩ y hy))
     (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) hKL t
@@ -327,8 +329,8 @@ theorem hasDerivAt_toReal_klDiv_map_trajectory
       (-∫ y, (s y (toVectorField Φ (m t) y) + divergence ℝ (toVectorField Φ (m t)) y)
         ∂(μ.map (trajectory Φ m 0 · t))) t :=
   InformationTheory.hasDerivAt_toReal_klDiv_map_flow hΩ hp hpc hp₀
-    (continuous_toVectorField_apply hm) (fun t ↦ lipschitzWith_toVectorField_of_norm_le hΦK (hmB t))
-    (fun _ y ↦ hasFDerivAt_toVectorField ((hΦ.differentiable one_ne_zero) y).hasFDerivAt)
+    (continuous_toVectorField_apply hm) (lipschitzWith_toVectorField_apply hΦK hmB)
+    (hasFDerivAt_toVectorField_apply (hΦ.differentiable one_ne_zero))
     (continuous_uncurry_pairing_comp_fderiv hΦ hm)
     (fun _ y hy ↦ toVectorField_eq_zero_of_eq_zero (hΦΩ y hy))
     (hasDerivAt_trajectory hm hmB hΦK 0) (trajectory_self hm hmB hΦK 0) hKL hs hsc t

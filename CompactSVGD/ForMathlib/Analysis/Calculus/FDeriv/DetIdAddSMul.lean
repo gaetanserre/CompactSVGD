@@ -9,20 +9,18 @@ public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.LinearAlgebra.Determinant
 public import Mathlib.LinearAlgebra.Trace
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.ContDiff.FiniteDimension
 import Mathlib.Analysis.Calculus.Deriv.Add
 import Mathlib.Analysis.Calculus.Deriv.Comp
 import Mathlib.Analysis.Calculus.Deriv.Mul
-import Mathlib.Analysis.Calculus.Deriv.Polynomial
+import TauCeti.Analysis.Calculus.FDeriv.Det.Basic
 
 /-!
 # The determinant along the line `t ↦ id + t • A`
 
 Let `E` be a finite-dimensional normed space over a nontrivially normed field `𝕜` and let
 `A : E →L[𝕜] E`. The function `t ↦ det (id + t • A)` has derivative `trace A` at `0`. This is
-Jacobi's formula at the identity. For matrices, `t ↦ det (1 + t • M)` is a polynomial whose
-derivative at `0` is `trace M` (`Matrix.derivative_det_one_add_X_smul`), and the formula transfers
-to endomorphisms through a basis. At a general time `t`, the derivative is
+Jacobi's formula at the identity. For matrices, it is `Matrix.hasDerivAt_det_one_add_smul` of Tau
+Ceti, and it transfers to endomorphisms through a basis. At a general time `t`, the derivative is
 `D det (id + t • A) A`. These are the Jacobian determinants of the perturbations
 `y ↦ y + t • v y` of the identity, whose derivative is `id + t • Dv`.
 
@@ -35,16 +33,6 @@ to endomorphisms through a basis. At a general time `t`, the derivative is
 @[expose] public section
 
 open Module
-
-open Polynomial in
-/-- **Jacobi's formula at the identity** for matrices: `t ↦ det (1 + t • M)` has derivative
-`trace M` at `0`. -/
-theorem Matrix.hasDerivAt_det_one_add_smul {n 𝕜 : Type*} [Fintype n] [DecidableEq n]
-    [NontriviallyNormedField 𝕜] (M : Matrix n n 𝕜) :
-    HasDerivAt (fun t : 𝕜 ↦ (1 + t • M).det) M.trace 0 := by
-  have h := (det (1 + (X : 𝕜[X]) • M.map C)).hasDerivAt 0
-  rw [derivative_det_one_add_X_smul] at h
-  exact h.congr_of_eventuallyEq (.of_forall fun t ↦ by simp [eval_det, ← smul_eq_mul_diagonal])
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {E : Type*} [NormedAddCommGroup E]
   [NormedSpace 𝕜 E]
@@ -63,7 +51,7 @@ theorem hasDerivAt_det_id_add_smul [CompleteSpace 𝕜] (A : E →L[𝕜] E) (t 
     HasDerivAt (fun t : 𝕜 ↦ LinearMap.det ((ContinuousLinearMap.id 𝕜 E + t • A : E →L[𝕜] E) :
       E →ₗ[𝕜] E)) (fderiv 𝕜 det (ContinuousLinearMap.id 𝕜 E + t • A) A) t := by
   have hdet : Differentiable 𝕜 det :=
-    (ContinuousLinearMap.contDiff_det (𝕜 := 𝕜) (E := E) (n := 1)).differentiable one_ne_zero
+    (ContinuousLinearMap.contDiff_det (𝕜 := 𝕜) (E := E) (r := 1)).differentiable one_ne_zero
   have hline : HasDerivAt (fun t : 𝕜 ↦ ContinuousLinearMap.id 𝕜 E + t • A) A t := by
     simpa using ((hasDerivAt_id t).smul_const A).const_add (ContinuousLinearMap.id 𝕜 E)
   exact (hdet _).hasFDerivAt.comp_hasDerivAt t hline

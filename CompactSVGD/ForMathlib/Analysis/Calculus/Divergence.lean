@@ -7,8 +7,8 @@ module
 
 public import CompactSVGD.Definitions
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
+public import TauCeti.Topology.Algebra.Module.Trace
 
-import CompactSVGD.ForMathlib.Topology.Algebra.Module.Trace
 import Mathlib.Analysis.Calculus.ContDiff.Comp
 import Mathlib.Analysis.Calculus.FDeriv.Mul
 
@@ -41,11 +41,11 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {E : Type*} [NormedAddCom
   [NormedSpace 𝕜 E] {f : E → E} {x : E}
 
 theorem divergence_eq_traceCLM [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E] :
-    divergence 𝕜 f x = ContinuousLinearMap.traceCLM 𝕜 E (fderiv 𝕜 f x) := by
-  rw [ContinuousLinearMap.traceCLM_apply, divergence]
+    divergence 𝕜 f x = TauCeti.traceCLM 𝕜 E (fderiv 𝕜 f x) := by
+  rw [TauCeti.traceCLM_apply, divergence]
 
 theorem divergence_eq_traceCLM_comp [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E] :
-    divergence 𝕜 f = ContinuousLinearMap.traceCLM 𝕜 E ∘ fderiv 𝕜 f :=
+    divergence 𝕜 f = TauCeti.traceCLM 𝕜 E ∘ fderiv 𝕜 f :=
   funext fun _ ↦ divergence_eq_traceCLM
 
 theorem HasFDerivAt.divergence_eq {f' : E →L[𝕜] E} (h : HasFDerivAt f f' x) :
@@ -104,15 +104,15 @@ variable [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E]
 theorem ContDiffAt.continuousAt_divergence {n : WithTop ℕ∞} (hf : ContDiffAt 𝕜 n f x)
     (hn : n ≠ 0) : ContinuousAt (divergence 𝕜 f) x := by
   rw [divergence_eq_traceCLM_comp]
-  exact (ContinuousLinearMap.traceCLM 𝕜 E).continuous.continuousAt.comp (hf.continuousAt_fderiv hn)
+  exact (TauCeti.traceCLM 𝕜 E).continuous.continuousAt.comp (hf.continuousAt_fderiv hn)
 
 theorem ContDiff.continuous_divergence (hf : ContDiff 𝕜 1 f) : Continuous (divergence 𝕜 f) :=
   continuous_iff_continuousAt.2 fun x ↦ (hf.contDiffAt (x := x)).continuousAt_divergence one_ne_zero
 
 /-- The divergence of a `K`-Lipschitz vector field is bounded by `‖trace‖ * K`. -/
 theorem norm_divergence_le_of_lipschitz {K : ℝ≥0} (hf : LipschitzWith K f) (x : E) :
-    ‖divergence 𝕜 f x‖ ≤ ‖ContinuousLinearMap.traceCLM 𝕜 E‖ * K := by
+    ‖divergence 𝕜 f x‖ ≤ ‖TauCeti.traceCLM 𝕜 E‖ * K := by
   rw [divergence_eq_traceCLM]
-  exact (ContinuousLinearMap.traceCLM 𝕜 E).le_opNorm_of_le (norm_fderiv_le_of_lipschitz 𝕜 hf)
+  exact (TauCeti.traceCLM 𝕜 E).le_opNorm_of_le (norm_fderiv_le_of_lipschitz 𝕜 hf)
 
 end Regularity

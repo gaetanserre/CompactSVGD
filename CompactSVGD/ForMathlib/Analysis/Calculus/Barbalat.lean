@@ -6,9 +6,6 @@ Authors: Gaëtan Serré
 module
 
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-public import Mathlib.Topology.UniformSpace.UniformConvergenceTopology
-
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
 
 /-!
 # Barbalat's lemma
@@ -88,7 +85,8 @@ theorem tendsto_zero_of_uniformContinuousOn_of_integral_le {u : ℝ → ℝ} {M 
     induction N with
     | zero =>
       have h := intervalIntegral.integral_add_adjacent_intervals
-        (hint (a := 0) (b := t 0) le_rfl (ht₀ 0)) (hint (b := t 0 + δ) (ht₀ 0) (by linarith [ht₀ 0]))
+        (hint (a := 0) (b := t 0) le_rfl (ht₀ 0))
+        (hint (b := t 0 + δ) (ht₀ 0) (by linarith [ht₀ 0]))
       push_cast
       linarith [hpos le_rfl (ht₀ 0), hpiece 0]
     | succ N ih =>

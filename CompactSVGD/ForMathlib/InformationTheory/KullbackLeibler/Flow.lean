@@ -9,7 +9,6 @@ public import CompactSVGD.Definitions
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
 import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
-import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.Measurable
 import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
 import CompactSVGD.ForMathlib.Analysis.ODE.FlowJacobian
 import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
@@ -18,6 +17,7 @@ import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Transport
 import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
 import Mathlib.Analysis.Calculus.ParametricIntegral
+import TauCeti.Analysis.Calculus.FDeriv.Measurable
 
 /-!
 # The dissipation of the Kullback–Leibler divergence along a flow
@@ -56,7 +56,7 @@ private theorem integrable_log_det_fderiv_flow (hvK : ∀ t, LipschitzWith K (v 
     (hv : ∀ t y, HasFDerivAt (v t) (Dv t y) y) (hDv : Continuous (uncurry Dv))
     (hα : ∀ x t, HasDerivAt (α x) (v t (α x t)) t) (hα₀ : ∀ x, α x 0 = x) (t : ℝ) :
     Integrable (fun x ↦ log (fderiv ℝ (α · t) x).det) μ :=
-  Integrable.of_bound (measurable_det_fderiv ℝ _).log.aestronglyMeasurable _
+  Integrable.of_bound (TauCeti.measurable_det_fderiv ℝ _).log.aestronglyMeasurable _
     (.of_forall fun x ↦ (Real.norm_eq_abs _).trans_le
       (abs_log_det_fderiv_flow_le hv hDv hvK hα hα₀ x t))
 
@@ -134,11 +134,11 @@ theorem hasDerivAt_toReal_klDiv_map_flow {s : E → StrongDual ℝ E}
     (contDiff_one_iff_hasFDerivAt.2 ⟨Dv t, hDv.comp (continuous_const.prodMk continuous_id),
       hv t⟩).continuous_divergence
   have hlogdetm (t : ℝ) : Measurable fun x ↦ log (fderiv ℝ (α · t) x).det :=
-    (measurable_det_fderiv ℝ _).log
+    (TauCeti.measurable_det_fderiv ℝ _).log
   have hlogp : ContinuousOn (fun x ↦ log (p x)) Ω := hpc.log fun x hx ↦ (hp₀ x hx).ne'
   have hderiv := hasDerivAt_integral_of_dominated_loc_of_deriv_le (μ := μ) (F := G) (F' := G')
     (x₀ := t₀) (s := Metric.ball t₀ 1)
-    (bound := fun _ ↦ S * V + ‖ContinuousLinearMap.traceCLM ℝ E‖ * K)
+    (bound := fun _ ↦ S * V + ‖TauCeti.traceCLM ℝ E‖ * K)
     (Metric.ball_mem_nhds t₀ one_pos) ?_ ?_ ?_ ?_ (integrable_const _) ?_
   · rw [funext hF, hG', neg_eq_zero_sub]
     exact (hasDerivAt_const t₀ _).sub hderiv.2

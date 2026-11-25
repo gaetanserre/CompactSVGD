@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Analysis.ODE.Basic
 
-import CompactSVGD.ForMathlib.Topology.Connected.Basic
+import TauCeti.Topology.Frontier
 import Mathlib.Analysis.ODE.ExistUnique
 
 /-!

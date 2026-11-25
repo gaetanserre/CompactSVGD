@@ -104,6 +104,11 @@ theorem lipschitzWith_toVectorField_of_norm_le (hΦ : LipschitzWith K Φ) {h : �
     (hh : ‖h‖ ≤ B) : LipschitzWith (B * K) (toVectorField Φ h) :=
   (lipschitzWith_toVectorField hΦ h).weaken (by gcongr; exact_mod_cast hh)
 
+/-- The vector fields of a curve bounded by `B` are `B K`-Lipschitz. -/
+theorem lipschitzWith_toVectorField_apply (hΦ : LipschitzWith K Φ) (hm : ∀ t, ‖m t‖ ≤ B)
+    (t : ℝ) : LipschitzWith (B * K) (toVectorField Φ (m t)) :=
+  lipschitzWith_toVectorField_of_norm_le hΦ (hm t)
+
 theorem norm_toVectorField_le_of_le (hΦ : ∀ y, ‖Φ y‖ ≤ C) {h : 𝓗[d, H₀]} (hh : ‖h‖ ≤ B)
     (y : EuclideanSpace ℝ (Fin d)) :
     ‖toVectorField Φ h y‖ ≤ B * C :=
@@ -112,6 +117,12 @@ theorem norm_toVectorField_le_of_le (hΦ : ∀ y, ‖Φ y‖ ≤ C) {h : 𝓗[d,
 theorem continuous_toVectorField_apply (hm : Continuous m) (y : EuclideanSpace ℝ (Fin d)) :
     Continuous fun t ↦ toVectorField Φ (m t) y :=
   (continuous_pairing.comp hm).clm_apply continuous_const
+
+/-- The derivative of the vector field of `m t` at `y`, for a differentiable feature map. -/
+theorem hasFDerivAt_toVectorField_apply (hΦ : Differentiable ℝ Φ) (t : ℝ)
+    (y : EuclideanSpace ℝ (Fin d)) :
+    HasFDerivAt (toVectorField Φ (m t)) ((pairing (m t)).comp (fderiv ℝ Φ y)) y :=
+  hasFDerivAt_toVectorField (hΦ y).hasFDerivAt
 
 /-- The derivative `(t, y) ↦ (pairing (m t)).comp (fderiv ℝ Φ y)` of the vector field of `m t` at
 `y` is jointly continuous. -/

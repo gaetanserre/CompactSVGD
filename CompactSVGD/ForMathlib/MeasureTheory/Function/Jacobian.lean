@@ -9,8 +9,8 @@ public import Mathlib.Analysis.Calculus.FDeriv.Defs
 public import Mathlib.MeasureTheory.Measure.WithDensity
 public import Mathlib.Topology.Algebra.Module.Determinant
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.Measurable
 import Mathlib.MeasureTheory.Function.Jacobian
+import TauCeti.Analysis.Calculus.FDeriv.Measurable
 
 /-!
 # Transporting a measure with a density by a diffeomorphism
@@ -46,7 +46,7 @@ theorem map_symm_withDensity_eq_withDensity_det_fderiv (hΩ : MeasurableSet Ω) 
       ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)).withDensity fun x ↦
         .ofReal (p (e x) * (fderiv ℝ e x).det / p x) := by
   have hw : Measurable fun x ↦ p (e x) * (fderiv ℝ e x).det / p x :=
-    ((hp.comp e.measurable).mul (measurable_det_fderiv ℝ e)).div hp
+    ((hp.comp e.measurable).mul (TauCeti.measurable_det_fderiv ℝ e)).div hp
   ext A hA
   have heA : MeasurableSet (⇑e '' A) := e.measurableSet_image.2 hA
   rw [Measure.map_apply e.symm.measurable hA, ← e.image_eq_preimage_symm,

@@ -6,21 +6,25 @@ Authors: Gaëtan Serré
 module
 
 public import CompactSVGD.Definitions
-public import Mathlib.Topology.MetricSpace.Bounded
 
 /-!
 # The modulus of continuity of a function on a set
 
 This file is the API of `modulusOfContinuityOn f s`, defined in `CompactSVGD/Definitions.lean`:
-`ω(r)` is the supremum of `dist (f x) (f y)` over the points `x, y ∈ s` with `dist x y ≤ r`.
+`ω(r)` is the supremum of `dist (f x) (f y)` over the points `x, y ∈ s` with `dist x y ≤ r`. When
+`f` is uniformly continuous on `s`, it is a continuity modulus of `f` on `s`, in the sense of
+`Metric.uniformEquicontinuous_of_continuity_modulus`: `dist (f x) (f y) ≤ ω(dist x y)` and
+`ω(r) → 0` as `r → 0`.
 
 ## Main statements
 
 * `dist_le_modulusOfContinuityOn`: `dist (f x) (f y) ≤ ω(dist x y)` on `s`, when `f` is bounded on
   `s`.
 * `monotone_modulusOfContinuityOn`: `ω` is nondecreasing, when `f` is bounded on `s`.
-* `tendsto_modulusOfContinuityOn`: `ω(r) → 0` as `r → 0`, when `f` is uniformly continuous on `s`.
-* `exists_pos_forall_modulusOfContinuityOn_mul_lt`: `ω(c r) < ε` for every small enough `r ≥ 0`.
+* `UniformContinuousOn.tendsto_modulusOfContinuityOn`: `ω(r) → 0` as `r → 0`, when `f` is
+  uniformly continuous on `s`.
+* `Metric.uniformContinuous_of_continuity_modulus`: a function with a continuity modulus is
+  uniformly continuous.
 -/
 
 @[expose] public section
@@ -52,7 +56,7 @@ theorem monotone_modulusOfContinuityOn (hf : Bornology.IsBounded (f '' s)) :
     dist_le_modulusOfContinuityOn hf hx hy (hxy.trans hr)
 
 /-- The modulus of continuity of a uniformly continuous function tends to `0` at `0`. -/
-theorem tendsto_modulusOfContinuityOn (hf : UniformContinuousOn f s) :
+theorem UniformContinuousOn.tendsto_modulusOfContinuityOn (hf : UniformContinuousOn f s) :
     Tendsto (modulusOfContinuityOn f s) (𝓝 0) (𝓝 0) := by
   refine Metric.tendsto_nhds_nhds.2 fun ε hε ↦ ?_
   obtain ⟨δ, hδ, h⟩ := Metric.uniformContinuousOn_iff.1 hf (ε / 2) (half_pos hε)
@@ -62,13 +66,17 @@ theorem tendsto_modulusOfContinuityOn (hf : UniformContinuousOn f s) :
     |>.trans_lt (half_lt_self hε)
   exact hxy.trans_lt ((le_abs_self r).trans_lt (by rwa [Real.dist_eq, sub_zero] at hr))
 
-/-- For a uniformly continuous function, `ω(c r) < ε` for every small enough `r ≥ 0`. -/
-theorem exists_pos_forall_modulusOfContinuityOn_mul_lt (hf : UniformContinuousOn f s) (c : ℝ)
-    {ε : ℝ} (hε : 0 < ε) :
-    ∃ δ > 0, ∀ r, 0 ≤ r → r < δ → modulusOfContinuityOn f s (c * r) < ε := by
-  obtain ⟨δ, hδ, h⟩ := Metric.tendsto_nhds_nhds.1 ((tendsto_modulusOfContinuityOn hf).comp
-    ((continuous_const_mul c).tendsto' 0 0 (mul_zero c))) ε hε
-  refine ⟨δ, hδ, fun r hr hrδ ↦ ?_⟩
-  have := h (by rwa [Real.dist_eq, sub_zero, abs_of_nonneg hr])
-  rw [Function.comp_apply, Real.dist_eq, sub_zero] at this
-  exact (le_abs_self _).trans_lt this
+/-- For a uniformly continuous function, `ω(c r) → 0` as `r → 0`. -/
+theorem UniformContinuousOn.tendsto_modulusOfContinuityOn_comp_mul_left
+    (hf : UniformContinuousOn f s) (c : ℝ) :
+    Tendsto (fun r ↦ modulusOfContinuityOn f s (c * r)) (𝓝 0) (𝓝 0) :=
+  hf.tendsto_modulusOfContinuityOn.comp ((continuous_const_mul c).tendsto' 0 0 (mul_zero c))
+
+/-- A function with a continuity modulus `b`, i.e. `dist (f x) (f y) ≤ b (dist x y)` with
+`b(r) → 0` as `r → 0`, is uniformly continuous. This is the case of a single function of
+`Metric.uniformEquicontinuous_of_continuity_modulus`. -/
+theorem Metric.uniformContinuous_of_continuity_modulus {γ : Type*} [PseudoMetricSpace γ]
+    (b : ℝ → ℝ) (b_lim : Tendsto b (𝓝 0) (𝓝 0)) (g : γ → β)
+    (H : ∀ x y, dist (g x) (g y) ≤ b (dist x y)) : UniformContinuous g :=
+  (uniformEquicontinuous_of_continuity_modulus b b_lim (fun _ : Unit ↦ g)
+    fun x y _ ↦ H x y).uniformContinuous ()

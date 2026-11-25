@@ -1,16 +1,12 @@
-module -- shake: keep-all -- deprecated_module: ignore
+module  -- shake: keep-all --deprecated_module: ignore
 
 public import CompactSVGD.Definitions
-public import CompactSVGD.FeatureMap.Sequence
 public import CompactSVGD.FeatureMap.Trajectory
 public import CompactSVGD.FeatureMap.VectorField
 public import CompactSVGD.ForMathlib.Analysis.Calculus.Barbalat
-public import CompactSVGD.ForMathlib.Analysis.Calculus.ContDiff.FiniteDimension
 public import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
 public import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.DetIdAddSMul
-public import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.Measurable
 public import CompactSVGD.ForMathlib.Analysis.Convex.TotallyBounded
-public import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.PiL2
 public import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.UnitBall
 public import CompactSVGD.ForMathlib.Analysis.Normed.PerturbationOfIdentity
 public import CompactSVGD.ForMathlib.Analysis.ODE.FlowHomeomorph
@@ -19,7 +15,6 @@ public import CompactSVGD.ForMathlib.Analysis.ODE.Global
 public import CompactSVGD.ForMathlib.Analysis.ODE.Gronwall
 public import CompactSVGD.ForMathlib.Analysis.ODE.InitialCondition
 public import CompactSVGD.ForMathlib.Analysis.ODE.Invariance
-public import CompactSVGD.ForMathlib.Analysis.ODE.Linear
 public import CompactSVGD.ForMathlib.Analysis.ODE.Liouville
 public import CompactSVGD.ForMathlib.Analysis.SpecialFunctions.Log.Deriv
 public import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
@@ -33,8 +28,6 @@ public import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
 public import CompactSVGD.ForMathlib.MeasureTheory.Integral.Map
 public import CompactSVGD.ForMathlib.MeasureTheory.Measure.Map
 public import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
-public import CompactSVGD.ForMathlib.Topology.Algebra.Module.Trace
-public import CompactSVGD.ForMathlib.Topology.Connected.Basic
-public import CompactSVGD.ForMathlib.Topology.ContinuousMap.Bounded.Causal
+public import CompactSVGD.ForMathlib.Topology.MetricSpace.ModulusOfContinuity
 public import CompactSVGD.ForMathlib.Topology.Order.Gluing
 public import CompactSVGD.Paper

@@ -7,13 +7,13 @@ module
 
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 
-import CompactSVGD.ForMathlib.Analysis.Calculus.FDeriv.Measurable
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.DataProcessing
 import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Reweighting
 import CompactSVGD.ForMathlib.MeasureTheory.Function.Jacobian
 import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
 import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
+import TauCeti.Analysis.Calculus.FDeriv.Measurable
 
 /-!
 # The Kullback–Leibler divergence of a transported measure
@@ -41,6 +41,12 @@ namespace InformationTheory
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
   [MeasurableSpace E] [BorelSpace E] {vol : Measure E} [vol.IsAddHaarMeasure] {Ω : Set E}
   {p : E → ℝ} {e : E ≃ᵐ E}
+
+omit [NormedSpace ℝ E] [FiniteDimensional ℝ E] in
+private theorem isFiniteMeasure_withDensity_of_continuousOn (hΩ : IsCompact Ω)
+    (hpc : ContinuousOn p Ω) :
+    IsFiniteMeasure ((vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) :=
+  isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
 
 section KullbackLeibler
 
@@ -80,7 +86,7 @@ private theorem exists_weight :
   have hlogp : ContinuousOn (fun x ↦ log (p x)) Ω := hpc.log fun x hx ↦ (hp₀ x hx).ne'
   have hlogpe : ContinuousOn (fun x ↦ log (p (e x))) Ω :=
     hlogp.comp (fun x hx ↦ (he x hx).continuousAt.continuousWithinAt) fun _ hx ↦ heΩ hx
-  refine ⟨w, ((hp.comp e.measurable).mul (measurable_det_fderiv ℝ e)).div hp,
+  refine ⟨w, ((hp.comp e.measurable).mul (TauCeti.measurable_det_fderiv ℝ e)).div hp,
     hνΩ.mono fun _ hx ↦ hw₀ hx, (((hlogpe.integrable_of_ae_mem hΩ hμΩ).sub
       (hlogp.integrable_of_ae_mem hΩ hμΩ)).add hdetμ).congr hlogw.symm, hlogw, ?_⟩
   -- Transport `π` backwards, by the change of variables formula.
@@ -94,8 +100,7 @@ logarithm is `μ`-integrable. If `KL(μ ‖ π) < ∞`, then `KL(e#μ ‖ π) < 
 theorem klDiv_map_ne_top :
     klDiv (μ.map e) ((vol.restrict Ω).withDensity fun x ↦ .ofReal (p x)) ≠ ∞ := by
   obtain ⟨hμν, hllr⟩ := klDiv_ne_top_iff.1 hμ
-  have : IsFiniteMeasure ((vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)) :=
-    isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
+  have := isFiniteMeasure_withDensity_of_continuousOn (vol := vol) hΩ hpc
   obtain ⟨w, hw, hw₀, hlog, -, hνe⟩ := exists_weight hΩ hp hpc hp₀ he himage hdet hdetμ hμ
   rw [e.klDiv_map_left, hνe]
   exact klDiv_withDensity_ofReal_right_ne_top hμν hllr hw.aemeasurable hw₀ hlog
@@ -111,8 +116,7 @@ theorem toReal_klDiv_map_eq :
         ∫ x, (log (p (e x)) - log (p x) + log (fderiv ℝ e x).det) ∂μ := by
   set ν := (vol.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)
   obtain ⟨hμν, hllr⟩ := klDiv_ne_top_iff.1 hμ
-  have : IsFiniteMeasure ν :=
-    isFiniteMeasure_withDensity_ofReal (hpc.integrableOn_compact hΩ).hasFiniteIntegral
+  have : IsFiniteMeasure ν := isFiniteMeasure_withDensity_of_continuousOn hΩ hpc
   obtain ⟨w, hw, hw₀, hlog, hlogw, hνe⟩ := exists_weight hΩ hp hpc hp₀ he himage hdet hdetμ hμ
   have : IsFiniteMeasure (ν.withDensity fun x ↦ ENNReal.ofReal (w x)) := by
     rw [← hνe]

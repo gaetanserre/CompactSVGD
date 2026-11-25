@@ -1,10 +1,12 @@
 # CompactSVGD
 
-A Lean 4 formalization of the mean-field theory of Stein Variational Gradient Descent (SVGD) on a
-compact domain `Ω ⊆ ℝᵈ`, following the theoretical appendix of the revised version of *Stein
-Boltzmann Sampling* (Serré, Kalogeratos, Vayatis). The numbering is that of the AISTATS 2025
-version. There is no `sorry`, the project only depends on Mathlib (branch `master`), and the code
-follows the Mathlib style guidelines.
+A Lean 4 formalization of the paper *Stein Variational Gradient Descent on a compact domain*
+(G. Serré). It proves that, on a compact domain `Ω ⊆ ℝᵈ`, the continuous-time dynamics of SVGD
+exists, that the time derivative of the Kullback–Leibler divergence to the target is minus the
+kernelized Stein discrepancy, and that the dynamics converges weakly to the target when the kernel
+is Stein-universal. There is no
+`sorry`. The project depends on Mathlib and on [Tau Ceti](https://github.com/TauCetiProject/TauCeti)
+(branch `main`, which pins Mathlib), and the code follows the Mathlib style guidelines.
 
 ## Organization
 
@@ -14,69 +16,64 @@ of [`CompactSVGD/Paper.lean`](CompactSVGD/Paper.lean): `lake comparator` checks 
 below). The project has three parts.
 
 1. **`CompactSVGD/ForMathlib/`**, the general mathematics that Mathlib does not have yet: the
-   divergence of a vector field, global solutions of Lipschitz ODEs and the Jacobian of their
-   flows, Liouville's formula, Barbalat's lemma, fixed points of causal maps, the two-point problem
-   for a scalar linear ODE, and the Kullback–Leibler divergence along a flow. Nothing there mentions
-   an object of the paper.
+   divergence of a vector field, global solutions of Lipschitz ODEs (built on Tau Ceti's
+   `ODE.nonautonomousSolution`) and the Jacobian of their flows, Liouville's formula, Barbalat's
+   lemma, the modulus of continuity, and the Kullback–Leibler divergence of a transported measure
+   and along a flow. Nothing there mentions an object of the paper.
 2. **`CompactSVGD/FeatureMap/`**, the lemmas on the vector fields `y ↦ (⟪hᵢ, Φ y⟫)ᵢ` of the
-   elements `h` of the product RKHS `𝓗 = H₀ᵈ` of a feature map `Φ : ℝᵈ → H₀`, on the
-   trajectories of the vector field of a curve in `𝓗`, and on the feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²`
-   of a sequence of functions.
-3. **`CompactSVGD/Paper.lean`**, the paper itself. It follows the appendix, in its order: every
-   definition and result of the paper appears there, with its proof. The only additions are the
-   construction of the mean-field SVGD flow, which the AISTATS 2025 version assumes, the primed
-   versions of the results along the flow, a Stein-universal kernel on `[-1, 1]` in the last
-   section, and private technical lemmas. The docstrings give the
-   paper's numbering and the proofs are commented, so that the file can be read alongside the paper.
-   The hypotheses on the space, the target and the kernel are gathered in one structure,
-   `SVGD.StandingAssumptions`. The definitions it uses from `CompactSVGD/Definitions.lean` are
-   recalled by `example`s proved by `rfl`.
+   elements `h` of `𝓗 = H₀ᵈ`, for a feature map `Φ : ℝᵈ → H₀`, and on the trajectories of the
+   vector field of a curve in `𝓗`.
+3. **`CompactSVGD/Paper.lean`**, the paper itself. It follows the paper section by section: every
+   definition, assumption and result appears there in the paper's order, under the paper's name,
+   with the paper's proof. The docstrings give the paper's numbering and the proofs are commented,
+   so that the file can be read alongside the paper. The general results whose proof does not
+   involve SVGD are proved in the two folders above and restated there. Schauder's fixed point
+   theorem (Theorem 5) comes from Tau Ceti. The definitions used from
+   `CompactSVGD/Definitions.lean` are recalled by `example`s proved by `rfl`.
 
 All the definitions outside `Paper.lean` are gathered in `CompactSVGD/Definitions.lean`, so that
 they can be checked by hand in one place. The other files only contain lemmas.
 
-The results on the Boltzmann distribution (Definition 2.1, Properties A.1, Theorems B.1 and B.2)
-and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
-
 ## The results of the paper
 
-All the declarations below are in [`CompactSVGD/Paper.lean`](CompactSVGD/Paper.lean).
+All the declarations below are in the namespace `SVGD` of
+[`CompactSVGD/Paper.lean`](CompactSVGD/Paper.lean), except `ProbabilityTheory.steinOperator`.
 
 | Paper | Lean |
 |---|---|
-| Standing assumptions (Section 3, Appendix A.2.1) | `SVGD.AdmissibleTarget`, `SVGD.AdmissibleFeatureMap`, `SVGD.StandingAssumptions` |
-| Stein operator, Definition A.2 (Stein class) | `ProbabilityTheory.steinOperator`, `ProbabilityTheory.steinClass` |
-| Lemma A.3 (Stein's identity) | `ProbabilityTheory.stein_identity` |
-| `ξ`, `φ*_μ`, Definition A.5 (KSD `𝔎(μ ∣ π)`) | `SVGD.steinFeature`, `SVGD.direction`, `SVGD.kernelSteinDiscrepancy` (notation `𝔎[Φ, s] μ`) |
-| Reproducing property | `SVGD.reproducing_property` |
-| Lemma A.6 (regularity of `ξ`) | `SVGD.xi_regularity_*`, `SVGD.continuousOn_steinOperator` |
-| Theorem A.7 (steepest trajectory) | `SVGD.steepest_trajectory_*` |
-| Theorem A.8 (KL steepest descent) | `SVGD.klFirstVariation`, `SVGD.kl_steepest_descent_*` |
-| Definition A.9 (Stein-universal kernel: the functions `𝒜_π f + c` are dense in `C(Ω, ℝ)`) | `SVGD.IsSteinUniversal` |
-| Existence of the mean-field SVGD flow (assumed in the paper) | `SVGD.IsMeanFieldCurve`, `SVGD.exists_meanField`, `SVGD.meanFieldCurve`, `SVGD.meanFieldFlow`, `SVGD.meanFieldCurve_eq_direction`, `SVGD.meanFieldFlow_zero`, `SVGD.exists_homeomorph_meanFieldFlow`, `SVGD.hasDerivAt_meanFieldFlow` |
-| Theorem A.11 (time derivative of the KL divergence) | `SVGD.time_derivative_kl`, `SVGD.time_derivative_kl_antitoneOn` |
-| Proposition 3.2 (the KSD is a valid discrepancy) | `SVGD.ksd_valid_discrepancy` |
-| Lemma B.4, Corollary B.5, Lemma B.6 | `SVGD.ksd_uniform_continuity`, `SVGD.ksd_convergence`, `SVGD.cluster_points` |
-| **Theorem 3.1 (weak convergence of SVGD)** | `SVGD.weak_convergence` |
-| A kernel with all the hypotheses of Theorem 3.1 on `[-1, 1]` (not in the paper) | `SVGD.intervalFeatureMap`, `SVGD.admissibleFeatureMap_intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`, `SVGD.weak_convergence_intervalFeatureMap` |
+| Assumption 1 (Target distribution) | `TargetAssumption` |
+| Definition 1 (Stein operator) | `ProbabilityTheory.steinOperator` |
+| Lemma 1 (Perturbations of the identity) | `perturbations_of_identity_*` |
+| Lemma 2 (Transport of the Kullback–Leibler divergence) | `transport_kl`, `transport_kl_ne_top` |
+| Theorem 1 (First variation of the Kullback–Leibler divergence) | `first_variation`, `first_variation_*` |
+| Corollary 1 (Stein's identity for the target distribution) | `stein_identity`, `stein_identity_integrable` |
+| Assumption 2 (Kernel), the standing assumptions | `KernelAssumption`, `StandingAssumptions` |
+| Definition 2 (Kernelized Stein discrepancy `𝔎(ρ ∣ π)`) | `kernelSteinDiscrepancy` (notation `𝔎[Φ, s] ρ`) |
+| Lemma 3 (Stein feature), Lemma 4 (Regularity of `ξ`) | `steinFeature`, `stein_feature`, `xi_regularity_*` |
+| Theorem 2 (Stein witness) | `steinWitness`, `stein_witness`, `stein_witness_*` |
+| Theorem 3 (KL steepest descent) | `klFirstVariation`, `kl_steepest_descent_*` |
+| Equation (3), its solutions | `drift`, `IsSolution` |
+| **Theorem 4 (Existence of the continuous-time dynamics)** | `exists_continuous_time_dynamics` |
+| Lemma 5 (Positions for a given drift) | `positions_*` |
+| Lemma 6 (Set of the Stein witnesses), Equation (4) | `witnessSet`, `witness_set_*`, `fixedPointMap`, `IsConsistent` |
+| Lemma 7 (A consistent candidate gives a solution) | `consistent_candidate_isSolution` |
+| Equation (5), Theorem 5 (Schauder) | `dist_steinWitness_map_le`, `schauder` |
+| Lemma 8 (A consistent candidate on a bounded time interval) | `consistent_candidate_bounded_interval` |
+| Lemma 9 (Properties of the solutions) | `witnessCurve`, `solution_properties_*` |
+| Lemma 10 (Jacobian of `T_t`) | `jacobian_*` |
+| **Theorem 6 (Time derivative of the KL divergence)** | `time_derivative_kl`, `time_derivative_kl_*` |
+| Equations (8) and (9), Definition 3 (Stein-universal kernel) | `ksd_eq_zero_iff`, `steinWitness_eq_zero_iff`, `IsSteinUniversal`, `isSteinUniversal_iff`, `isSteinUniversal_iff_mean` |
+| Proposition 1 (The KSD vanishes only at `π`) | `ksd_vanishes_only_at_target` |
+| Lemma 11 (Barbalat), Lemma 12 (Uniform continuity of the KSD) | `barbalat`, `ksd_uniform_continuity`, `ksd_uniform_continuity_le` |
+| Corollary 2 (Convergence of the KSD), Lemma 13 (Limit points have a zero KSD) | `ksd_convergence`, `limit_points_ksd_eq_zero` |
+| **Theorem 7 (Convergence to the target distribution)** | `convergence_to_target` |
 
-The mean-field flow is described by the curve `m : ℝ → 𝓗` of its update directions: its trajectories
-are `T_t = trajectory Φ m 0 · t`, and the mean-field equation is `m t = φ*_{μ_t}` for `t ≥ 0`
-(`SVGD.IsMeanFieldCurve Φ s μ m`), where `μ_t = (T_t)#μ`. A solution exists
-(`SVGD.exists_meanField`): it is built on each `[n, n + 1]` by Tonelli's delayed approximations and
-the Arzelà–Ascoli theorem, without a Lipschitz condition on the score, so its uniqueness is not
-claimed. `SVGD.meanFieldCurve Φ s μ` picks one solution and `SVGD.meanFieldFlow Φ s μ` is its flow.
-Theorem A.11, Lemma B.4, Corollary B.5, Lemma B.6 and Theorem 3.1 are stated for this flow, so they
-do not assume its existence. Their primed versions (such as `SVGD.weak_convergence'`) hold for every
-solution `m` of the mean-field equation.
-
-The last section of `CompactSVGD/Paper.lean` shows that the hypotheses of Theorem 3.1 can be met.
-In dimension `1`, on `Ω = [-1, 1]`, the kernel `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)` is admissible
-and Stein-universal for every score continuous on `Ω`. Here `Rₙ` is the primitive of `tⁿ - mₙ`
-that vanishes at `±1`, `χ` is a smooth cutoff equal to `1` on `[-2, 2]`, and `wₙ > 0`. The proof of
-Stein-universality solves the Stein equation `σ u + u' = φ - c` with `u(±1) = 0`, then approximates
-`u'` by a polynomial (Weierstrass). Thus `SVGD.weak_convergence_intervalFeatureMap` is Theorem 3.1 on
-`[-1, 1]` with no hypothesis on the kernel. Kernels in dimension `d ≥ 2` are not formalized.
+The existence proof follows the paper. A candidate drift `m` gives the positions `T^m_t` of the
+particles (Lemma 5), and these positions give a new drift `G(m)(t) = φ*_{(T^m_t)#ρ₀}`. On a bounded
+time interval, `G` has a fixed point by Schauder's theorem, on a convex set of curves that is
+compact by the Arzelà–Ascoli theorem (Lemma 8). The fixed points on the intervals `[n, n + 1]` are
+glued into a solution on `[0, ∞)` (Theorem 4). Its uniqueness is not claimed: Theorems 6 and 7 hold
+for every solution.
 
 ## Checking the statements with `comparator`
 
@@ -102,14 +99,31 @@ lake comparator
 
 ## Build
 
-Fetch Mathlib's compiled files, then build:
+Fetch Mathlib's compiled files:
 
 ```bash
 lake exe cache get
 ```
 
+The compiled files of Tau Ceti come from its public cache, described by a Lake configuration file
+`.lake/tauceti-cache.toml`:
+
+```toml
+[[cache.service]]
+name = "tauceti-public"
+kind = "s3"
+artifactEndpoint = "https://cache.taucetiproject.org/artifacts"
+revisionEndpoint = "https://cache.taucetiproject.org/revisions"
+```
+
+Then fetch them and build:
+
 ```bash
-lake build
+LAKE_CONFIG=.lake/tauceti-cache.toml lake cache get --service tauceti-public --repo TauCetiProject/TauCeti --package TauCeti --mappings-only
+```
+
+```bash
+LAKE_CONFIG=.lake/tauceti-cache.toml lake build
 ```
 
 ## License
