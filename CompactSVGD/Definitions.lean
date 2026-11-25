@@ -6,7 +6,6 @@ Authors: Gaëtan Serré
 module
 
 public import Mathlib.Analysis.InnerProductSpace.PiL2
-public import Mathlib.Analysis.Normed.Lp.lpSpace
 public import Mathlib.Analysis.ODE.Basic
 public import Mathlib.LinearAlgebra.Trace
 
@@ -18,23 +17,19 @@ can be checked by hand in one place: all the other files only contain lemmas. To
 of `CompactSVGD/Paper.lean`, one only needs to trust Mathlib, this file, and the definitions and
 statements of `CompactSVGD/Paper.lean`.
 
-The first definitions are general; their API is in `CompactSVGD/ForMathlib/`. The next ones are the
+The first definitions are general; their API is in `CompactSVGD/Utils/`. The next ones are the
 vector fields of a feature map `Φ : ℝᵈ → H₀`, for the kernel `k(x, y) = ⟪Φ x, Φ y⟫` of SVGD, and
-their trajectories. The last ones build a feature map into `ℓ²(ℕ, ℝ)` from a sequence of functions.
-The lemmas on these feature maps are in `CompactSVGD/FeatureMap/`.
+their trajectories. Their lemmas are in `CompactSVGD/FeatureMap/`.
 
 ## Main definitions
 
 * `divergence 𝕜 f x`: the divergence of a vector field `f : E → E`, the trace of its derivative.
-* `ContinuousLinearMap.traceCLM 𝕜 E`: the trace of continuous endomorphisms of a
-  finite-dimensional space, as a continuous linear functional.
-* `ODE.globalSolution v t₀ x`: a solution on `ℝ` of `α' t = v t (α t)` with `α t₀ = x`.
+* `modulusOfContinuityOn f s`: the modulus of continuity of `f` on `s`.
+* `ODE.integralCurveThrough v t₀ x`: a solution on `ℝ` of `α' t = v t (α t)` with `α t₀ = x`.
 * `SVGD.pairing h`: the map `u ↦ (⟪hᵢ, u⟫)ᵢ` from `H₀` to `ℝᵈ`, for `h ∈ 𝓗[d, H₀]`.
 * `SVGD.toVectorField Φ h`: the vector field `y ↦ (⟪hᵢ, Φ y⟫)ᵢ` of `h ∈ 𝓗[d, H₀]`.
 * `SVGD.trajectory Φ m s x`: the trajectory through `x` at time `s` of the time-dependent vector
   field of a curve `m` in `𝓗[d, H₀]`.
-* `SVGD.seqFeatureMap g`: the feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²` of a sequence of functions `gₙ`,
-  with the weights `wₙ = SVGD.seqWeight g n`.
 
 ## Notation
 
@@ -59,20 +54,19 @@ def divergence (f : E → E) (x : E) : 𝕜 := LinearMap.trace 𝕜 E (fderiv �
 
 end Divergence
 
-/-! ### The trace as a continuous linear functional -/
+/-! ### The modulus of continuity of a function on a set -/
 
-namespace ContinuousLinearMap
+section ModulusOfContinuity
 
-variable (𝕜 E : Type*) [NontriviallyNormedField 𝕜] [CompleteSpace 𝕜] [AddCommGroup E]
-  [Module 𝕜 E] [TopologicalSpace E] [IsTopologicalAddGroup E] [ContinuousSMul 𝕜 E] [T2Space E]
-  [FiniteDimensional 𝕜 E]
+variable {α β : Type*} [PseudoMetricSpace α] [PseudoMetricSpace β]
 
-/-- The trace of continuous endomorphisms of a finite-dimensional space, as a continuous linear
-functional. Continuity is automatic, since `E →L[𝕜] E` is finite-dimensional. -/
-def traceCLM : (E →L[𝕜] E) →L[𝕜] 𝕜 :=
-  LinearMap.toContinuousLinearMap ((LinearMap.trace 𝕜 E).comp (coeLM 𝕜))
+/-- The modulus of continuity of `f` on `s`: `ω(r)` is the supremum of `dist (f x) (f y)` over the
+points `x, y ∈ s` with `dist x y ≤ r`. It is `0` when there is no such pair, and when these
+distances are unbounded. -/
+def modulusOfContinuityOn (f : α → β) (s : Set α) (r : ℝ) : ℝ :=
+  sSup {e | ∃ x ∈ s, ∃ y ∈ s, dist x y ≤ r ∧ dist (f x) (f y) = e}
 
-end ContinuousLinearMap
+end ModulusOfContinuity
 
 /-! ### Global solutions of ordinary differential equations -/
 
@@ -83,8 +77,8 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 open Classical in
 /-- An integral curve of `v` on `ℝ` with `α t₀ = x`, or the constant curve `x` if there is none.
 For a field continuous in time and Lipschitz in space, it is the unique solution
-(`ODE.exists_isIntegralCurve_of_lipschitzWith`, `IsIntegralCurve.eq_globalSolution`). -/
-def globalSolution (v : ℝ → E → E) (t₀ : ℝ) (x : E) : ℝ → E :=
+(`ODE.integralCurveThrough_eq_nonautonomousSolution`). -/
+def integralCurveThrough (v : ℝ → E → E) (t₀ : ℝ) (x : E) : ℝ → E :=
   if h : ∃ α : ℝ → E, α t₀ = x ∧ IsIntegralCurve α v then h.choose else fun _ ↦ x
 
 end ODE
@@ -111,29 +105,9 @@ def toVectorField (Φ : EuclideanSpace ℝ (Fin d) → H₀) (h : 𝓗[d, H₀])
   pairing h (Φ y)
 
 /-- The trajectory through `x` at time `s` of the time-dependent vector field
-`y ↦ toVectorField Φ (m t) y`, i.e. its global solution `ODE.globalSolution`. -/
+`y ↦ toVectorField Φ (m t) y`, i.e. its global solution `ODE.integralCurveThrough`. -/
 def trajectory (Φ : EuclideanSpace ℝ (Fin d) → H₀) (m : ℝ → 𝓗[d, H₀]) (s : ℝ)
     (x : EuclideanSpace ℝ (Fin d)) : ℝ → EuclideanSpace ℝ (Fin d) :=
-  ODE.globalSolution (fun t ↦ toVectorField Φ (m t)) s x
-
-/-! ### The feature map of a sequence of functions -/
-
-section Sequence
-
-open scoped lp
-
-variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-
-/-- The weight `wₙ = 2⁻ⁿ / (1 + Mₙ)` of `gₙ` in `SVGD.seqFeatureMap g`, where
-`Mₙ = sup_x (‖gₙ x‖ + ‖Dgₙ x‖)`. If `gₙ` or its derivative is unbounded, the supremum is `0`. -/
-def seqWeight (g : ℕ → E → ℝ) (n : ℕ) : ℝ :=
-  (2⁻¹ : ℝ) ^ n / (1 + ⨆ x, (‖g n x‖ + ‖fderiv ℝ (g n) x‖))
-
-/-- The feature map `x ↦ (wₙ gₙ(x))ₙ ∈ ℓ²(ℕ, ℝ)` of a sequence of functions `gₙ`, with the weights
-`wₙ = SVGD.seqWeight g n`. Its kernel is `∑ₙ wₙ² gₙ(x) gₙ(y)` (`SVGD.inner_seqFeatureMap`). -/
-def seqFeatureMap (g : ℕ → E → ℝ) (x : E) : ℓ²(ℕ, ℝ) :=
-  ∑' n, (seqWeight g n * g n x) • lp.single 2 n 1
-
-end Sequence
+  ODE.integralCurveThrough (fun t ↦ toVectorField Φ (m t)) s x
 
 end SVGD

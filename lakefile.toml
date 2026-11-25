@@ -12,10 +12,15 @@ relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true # enables all the style linters of mathlib
 maxSynthPendingDepth = 3              # same as mathlib
 
+# Tau Ceti's `main` branch: the most recent Tau Ceti, as `mathlib` would follow
+# `master`. After `lake update`, `lean-toolchain` must equal
+# `.lake/packages/TauCeti/lean-toolchain`.
+# Mathlib comes from Tau Ceti, at the revision Tau Ceti pins: do not require it
+# here.
 [[require]]
-name = "mathlib"
-scope = "leanprover-community"
-rev = "master"
+name = "TauCeti"
+git = "https://github.com/TauCetiProject/TauCeti"
+rev = "main"
 
 [[lean_lib]]
 name = "CompactSVGD"

@@ -6,122 +6,109 @@ Authors: Gaëtan Serré
 module
 
 public import CompactSVGD.Definitions
-public import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
-public import Mathlib.Analysis.InnerProductSpace.l2Space
 public import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
-public import Mathlib.MeasureTheory.Measure.Haar.OfBasis
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 
-import CompactSVGD.FeatureMap.Sequence
 import CompactSVGD.FeatureMap.Trajectory
 import CompactSVGD.FeatureMap.VectorField
-import CompactSVGD.ForMathlib.Analysis.Calculus.Barbalat
-import CompactSVGD.ForMathlib.Analysis.Calculus.Divergence
-import CompactSVGD.ForMathlib.Analysis.Convex.TotallyBounded
-import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.PiL2
-import CompactSVGD.ForMathlib.Analysis.InnerProductSpace.UnitBall
-import CompactSVGD.ForMathlib.Analysis.ODE.Linear
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.Basic
-import CompactSVGD.ForMathlib.InformationTheory.KullbackLeibler.FirstVariation
-import CompactSVGD.ForMathlib.MeasureTheory.Function.LocallyIntegrable
-import CompactSVGD.ForMathlib.MeasureTheory.Integral.Map
-import CompactSVGD.ForMathlib.MeasureTheory.Measure.Map
-import CompactSVGD.ForMathlib.MeasureTheory.Measure.WithDensity
-import CompactSVGD.ForMathlib.Topology.ContinuousMap.Bounded.Causal
-import CompactSVGD.ForMathlib.Topology.Order.Gluing
-import Mathlib.Analysis.Calculus.ContDiff.WithLp
+import CompactSVGD.Utils.Analysis.Calculus.Barbalat
+import CompactSVGD.Utils.Analysis.Calculus.Divergence
+import CompactSVGD.Utils.Analysis.Convex.TotallyBounded
+import CompactSVGD.Utils.Analysis.InnerProductSpace.UnitBall
+import CompactSVGD.Utils.Analysis.Normed.PerturbationOfIdentity
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Basic
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.FirstVariation
+import CompactSVGD.Utils.InformationTheory.KullbackLeibler.Transport
+import CompactSVGD.Utils.MeasureTheory.Function.LocallyIntegrable
+import CompactSVGD.Utils.MeasureTheory.Measure.Map
+import CompactSVGD.Utils.MeasureTheory.Measure.WithDensity
+import CompactSVGD.Utils.Topology.MetricSpace.ModulusOfContinuity
+import CompactSVGD.Utils.Topology.Order.Gluing
+import Mathlib.Analysis.ODE.ExistUnique
 import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.MeasureTheory.Measure.LevyProkhorovMetric
 import Mathlib.MeasureTheory.Measure.Prokhorov
-import Mathlib.Topology.ContinuousMap.Weierstrass
+import Mathlib.Topology.ContinuousMap.Bounded.ArzelaAscoli
+import TauCeti.Analysis.Convex.SchauderFixedPoint
+import TauCeti.Analysis.ODE.Gronwall.TwoSided
 
 /-!
-# Mean-field SVGD on a compact domain
+# Stein Variational Gradient Descent on a compact domain
 
-This file formalizes the theory of SVGD developed in the appendix of the revised version of
-*Stein Boltzmann Sampling* (G. Serré, A. Kalogeratos, N. Vayatis). It follows the appendix: every
-definition and result of the paper appears here, in the paper's order, with its proof. The only
-additions are the construction of the mean-field SVGD flow, which the AISTATS 2025 version
-[Serre2025] assumes, the primed versions of the results along the flow, stated for every solution
-of the mean-field equation, a Stein-universal kernel on `[-1, 1]` in the last section, and private
-technical lemmas. The numbering is that of [Serre2025].
+This file develops the theory of Stein Variational Gradient Descent (SVGD) on a compact domain
+`Ω ⊆ ℝᵈ`: the continuous-time dynamics of SVGD exists, the Kullback–Leibler divergence to the
+target decreases along it at the rate of the kernelized Stein discrepancy, and the dynamics
+converges weakly to the target when the kernel is Stein-universal. The main definitions,
+assumptions and results are numbered, with one counter per kind (Assumption 1, Definition 2,
+Lemma 5, ...), and their proofs are commented.
 
-The general mathematics (divergence, global solutions of ODEs, Barbalat's lemma, Kullback–Leibler
-divergence along a flow, ...) lives in `CompactSVGD/ForMathlib/`, and the vector fields of the
-feature map and their trajectories in `CompactSVGD/FeatureMap/`. Their definitions are all gathered
-in `CompactSVGD/Definitions.lean`; those used in the statements are recalled here by `example`s
-proved by `rfl`.
+Theorems 4, 6 and 7 are numbered where they are announced, but stated after the lemmas of their
+proof. The general results whose proof does not involve SVGD (Lemmas 1 and 2, Theorems 1 and 5,
+Lemma 11, and the computations behind Lemma 10 and Theorem 6) are proved in
+`CompactSVGD/Utils/` and `CompactSVGD/FeatureMap/`, and restated here. Schauder's fixed point
+theorem (Theorem 5) comes from Tau Ceti.
 
-The results on the Boltzmann distribution (Definition 2.1, Properties A.1, Theorems B.1 and B.2)
-and the asymptotic convergence of SBS (Theorem 3.3) are not formalized.
-
-## How to read this file
-
-* **Appendix A.2.1, the standing assumptions.** `SVGD.StandingAssumptions Ω π p s Φ K C` fixes the
-  space (`Ω` compact), the target (`π = p · λ|_Ω`, with a continuous score `s = ∇ log p`) and the
-  kernel (`k(x, y) = ⟪Φ x, Φ y⟫` with an admissible feature map `Φ`). Most results take this single
-  hypothesis `hS`, plus the additional hypotheses of each result, written explicitly.
-* **Appendix A.2.2, Stein's method.** The Stein operator, the Stein class (Definition A.2) and
-  Stein's identity (Lemma A.3).
-* **Appendix A.2.3, the kernelized Stein discrepancy.** The product RKHS (Definition A.4), `ξ`,
-  `φ*`, the KSD (Definition A.5), Lemma A.6, Theorems A.7 and A.8, Stein-universal kernels
-  (Definition A.9), the existence of the mean-field SVGD flow, and the time derivative of the
-  Kullback–Leibler divergence along it (Theorem A.11).
-* **Appendix B, proofs.** Proposition 3.2, then Lemma B.4, Corollary B.5, Lemma B.6 and
-  Theorem 3.1, in the order of the proof of Theorem 3.1.
-* **A Stein-universal kernel on `[-1, 1]`** (not in [Serre2025]). An explicit kernel that satisfies
-  all the hypotheses of Theorem 3.1 in dimension `1`, for every admissible target.
+The general definitions (divergence, global solutions of ODEs, vector fields of a feature map and
+their trajectories, modulus of continuity) are in `CompactSVGD/Definitions.lean`; those used in the
+statements are recalled here by `example`s proved by `rfl`.
 
 ## Main statements
 
-* `ProbabilityTheory.stein_identity`: Lemma A.3.
-* `SVGD.steepest_trajectory_ksd`: Theorem A.7, `𝔎(μ ∣ π) = ‖φ*_μ‖²`.
-* `SVGD.kl_steepest_descent_direction`: Theorem A.8.
-* `SVGD.exists_meanField`, `SVGD.hasDerivAt_meanFieldFlow`: existence of the mean-field SVGD
-  flow.
-* `SVGD.time_derivative_kl`: Theorem A.11.
-* `SVGD.ksd_valid_discrepancy`: Proposition 3.2.
-* `SVGD.weak_convergence`: **Theorem 3.1**.
-* `SVGD.admissibleFeatureMap_intervalFeatureMap`, `SVGD.isSteinUniversal_intervalFeatureMap`: the
-  kernel of `SVGD.intervalFeatureMap` satisfies the hypotheses of Theorem 3.1 on `[-1, 1]`.
-* `SVGD.weak_convergence_intervalFeatureMap`: Theorem 3.1 on `[-1, 1]` with this kernel.
+* `SVGD.exists_continuous_time_dynamics`: **Theorem 4**, the continuous-time dynamics of SVGD
+  exists.
+* `SVGD.time_derivative_kl`: **Theorem 6**, `d/dt KL(ρ_t ‖ π) = -𝔎(ρ_t ∣ π)`.
+* `SVGD.convergence_to_target`: **Theorem 7**, `ρ_t` converges weakly to `π` when the kernel is
+  Stein-universal.
 
 ## Notation
 
-| Paper | Lean |
+| Mathematics | Lean |
 |---|---|
 | `ℝᵈ`, `λ` | `EuclideanSpace ℝ (Fin d)`, `volume` |
-| `μ ∈ 𝒫(Ω)` | `[IsProbabilityMeasure μ]` and `∀ᵐ x ∂μ, x ∈ Ω` |
-| `π`, its density, `∇ log π` | `π`, `p`, `s` |
-| `k(·, x)`, `H₀`, `𝓗 = H₀ᵈ` | `Φ x`, `H₀`, `𝓗[d, H₀]` |
-| `f(y)`, for `f ∈ 𝓗` | `toVectorField Φ f y` |
-| `𝒜_π f (x)` | `ProbabilityTheory.steinOperator s (toVectorField Φ f) x` |
-| `𝒮(μ)` | `ProbabilityTheory.steinClass` |
-| `ξ_x`, `φ*_μ` | `SVGD.steinFeature Φ s x`, `SVGD.direction Φ s μ` |
-| `𝔎(μ ∣ π)` | `𝔎[Φ, s] μ`, i.e. `SVGD.kernelSteinDiscrepancy Φ s μ` |
-| `∇_ε KL(T_ε(f)#μ ‖ π)∣_{ε=0}` | `SVGD.klFirstVariation Φ π μ f` |
-| `m t = φ*_{μ_t}` for `t ≥ 0` (mean-field equation) | `SVGD.IsMeanFieldCurve Φ s μ m` |
-| `T_t(x)`, `μ_t = (T_t)#μ` | `SVGD.meanFieldFlow Φ s μ t x`, `μ.map (SVGD.meanFieldFlow Φ s μ t)` |
+| `Ω°`, `∂Ω` | `interior Ω`, `frontier Ω` |
+| `ρ ∈ 𝒫(Ω)` | `[IsProbabilityMeasure ρ]` and `∀ᵐ x ∂ρ, x ∈ Ω` |
+| `T#ρ`, `KL(ρ ‖ ρ')` | `ρ.map T`, `klDiv ρ ρ'` (with values in `[0, ∞]`) |
+| `π = p · λ_Ω`, its score | `π`, `p`, `s` |
+| `𝒜_s v` | `ProbabilityTheory.steinOperator s v` |
+| `Φ`, `H₀`, `𝓗 = H₀ᵈ`, `f_Φ` | `Φ`, `H₀`, `𝓗[d, H₀]`, `toVectorField Φ f` |
+| `𝔎(ρ ∣ π)` | `𝔎[Φ, s] ρ`, i.e. `SVGD.kernelSteinDiscrepancy Φ s ρ` |
+| `ξ_x`, `φ*_ρ`, `b(x, ρ)` | `steinFeature Φ s x`, `steinWitness Φ s ρ`, `drift Φ s ρ x` |
+| `h'_f(0)` | `SVGD.klFirstVariation Φ π ρ f` |
+| `(T_t)_{t ≥ 0}` solves the continuous-time SVGD equation | `SVGD.IsSolution Φ s Ω ρ₀ T` |
+| `T^m_t(x)`, for a candidate `m` | `trajectory Φ m 0 x t` |
+| `G_{ρ₀}(m)`, `𝒲` | `fixedPointMap Φ s ρ₀ m`, `witnessSet Φ s Ω` |
+| `ω` | `modulusOfContinuityOn (steinFeature Φ s) Ω` |
+| `ρ_n ⇀ ρ` | `∀ g, ContinuousOn g Ω → Tendsto (fun n ↦ ∫ x, g x ∂ρ_n) atTop (𝓝 (∫ x, g x ∂ρ))` |
 
 ## Implementation notes
 
-The mean-field SVGD flow `(T_t)_{t ≥ 0}` of Theorems A.11 and 3.1 is described by the curve
-`m : ℝ → 𝓗` of its update directions: `m` is continuous and bounded, its trajectories are
-`T_t = trajectory Φ m 0 · t`, and the mean-field equation is `m t = φ*_{μ_t}` for `t ≥ 0`, where
-`μ_t = (T_t)#μ`. Such a curve exists (`SVGD.exists_meanField`); `SVGD.meanFieldCurve Φ s μ` picks
-one, and `SVGD.meanFieldFlow Φ s μ` is its flow. Its maps restrict to homeomorphisms of `Ω`. The
-results along the flow are stated for `SVGD.meanFieldFlow`, and their primed versions (such as
-`SVGD.weak_convergence'`) for every solution `m` of the mean-field equation.
+* The bound `B` of `‖ξ_x‖` on `Ω` (Lemma 4 (ii)) is any such bound, not necessarily
+  `max_{x ∈ Ω} ‖ξ_x‖`.
+* A curve `m : [0, ∞) → 𝓗` is a curve `m : ℝ → 𝓗` whose values at negative times do not matter,
+  and a family `(T_t)_{t ≥ 0}` is a map `T : ℝ → ℝᵈ → ℝᵈ`. The curve of the Stein witnesses of a
+  solution is extended to negative times by its value at `0` (`SVGD.witnessCurve`), as in the
+  proof of Lemma 10.
+* The witness estimate (`SVGD.dist_steinWitness_map_le`) assumes `‖ψ₁(x) - ψ₂(x)‖ ≤ r` for
+  `ρ`-almost every `x`, which is weaker than `sup_{x ∈ Ω} ‖ψ₁(x) - ψ₂(x)‖ ≤ r`.
+* Lemma 10 states that `T_t` is differentiable. The continuity of `DT_t` is not formalized: the
+  proof of Theorem 6 only needs the measurability of `x ↦ log det DT_t(x)`.
+* The integrability parts of Theorem 1 and Corollary 1 (`SVGD.first_variation_integrable`,
+  `SVGD.stein_identity_integrable`) assume neither that `v` is Lipschitz nor that `v = 0` on `∂Ω`:
+  their proofs do not use these hypotheses.
+* Lemma 13 (`SVGD.limit_points_ksd_eq_zero`) does not assume `ρ_∞ ∈ 𝒫(Ω)`. In the informal
+  statement, this hypothesis makes the weak convergence and `E_{x ∼ ρ_∞}[𝒜_s f_Φ(x)]` meaningful.
+  Here, the weak convergence is the hypothesis `hconv` on the integrals, and a Bochner integral is
+  always defined.
 
 ## References
 
-* [G. Serré, A. Kalogeratos, N. Vayatis, *Stein Boltzmann Sampling*][Serre2025]
-* [Q. Liu, J. Lee, M. Jordan, *A Kernelized Stein Discrepancy for Goodness-of-fit Tests*][Liu2016]
 * [Q. Liu, D. Wang, *Stein Variational Gradient Descent*][Liu2016SVGD]
+* [Q. Liu, J. Lee, M. Jordan, *A Kernelized Stein Discrepancy for Goodness-of-fit Tests*][Liu2016]
 * [Q. Liu, *Stein Variational Gradient Descent as Gradient Flow*][Liu2017]
-* [C. Stein, *A bound for the error in the normal approximation to the distribution of a sum of
-  dependent random variables*][Stein1972]
+* [J. Schauder, *Der Fixpunktsatz in Funktionalräumen*][Schauder1930]
+* [P. Billingsley, *Convergence of Probability Measures*][Billingsley1999]
+* [H. K. Khalil, *Nonlinear Systems*][Khalil2002]
 -/
 
 @[expose] public section
@@ -132,1357 +119,1569 @@ open scoped NNReal ENNReal RealInnerProductSpace BoundedContinuousFunction
 
 noncomputable section
 
-/-! ## Appendix A.2.1: the standing assumptions -/
+/-! ## Setting -/
 
 namespace SVGD
 
-variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
+variable {d : ℕ}
 
-/-- **The assumptions on the target** `π` (Section 3 of [Serre2025]): `π = p · λ|_Ω` is a
-probability measure, where the density `p` is measurable, continuous and positive on `Ω`, and its
-score `s` is the derivative of `log p` on the interior of `Ω` and is continuous on `Ω`. -/
-structure AdmissibleTarget (Ω : Set (EuclideanSpace ℝ (Fin d)))
+/-- **Assumption 1 (Target distribution).** The target distribution `π = p · λ_Ω` has the density
+`p` with respect to the Lebesgue measure on `Ω`, and the score `s`:
+1. `π` is a probability measure;
+2. `p` is measurable and continuous on `Ω`, and `p(x) > 0` for every `x ∈ Ω`;
+3. for every `x ∈ Ω°`, `log p` is differentiable at `x` and `D(log p)(x) = s(x)`;
+4. `s` is continuous on `Ω`. -/
+structure TargetAssumption (Ω : Set (EuclideanSpace ℝ (Fin d)))
     (π : Measure (EuclideanSpace ℝ (Fin d))) (p : EuclideanSpace ℝ (Fin d) → ℝ)
     (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d))) : Prop where
-  /-- `π` has density `p` with respect to the Lebesgue measure on `Ω`. -/
+  /-- `π = p · λ_Ω`. -/
   eq_withDensity : π = (volume.restrict Ω).withDensity fun x ↦ ENNReal.ofReal (p x)
-  /-- `π` is a probability measure, i.e. the density `p` is normalized. -/
+  /-- (i) `π` is a probability measure. -/
   isProbabilityMeasure : IsProbabilityMeasure π
-  /-- The density `p` is measurable. -/
+  /-- (ii) `p` is measurable. -/
   measurable : Measurable p
-  /-- The density `p` is continuous on `Ω`. -/
+  /-- (ii) `p` is continuous on `Ω`. -/
   continuousOn : ContinuousOn p Ω
-  /-- The density `p` is positive on `Ω`. -/
+  /-- (ii) `p` is positive on `Ω`. -/
   pos : ∀ x ∈ Ω, 0 < p x
-  /-- The score `s = ∇ log p` is the derivative of `log p` on the interior of `Ω`. -/
+  /-- (iii) `D(log p) = s` on `Ω°`. -/
   hasFDerivAt_log : ∀ x ∈ interior Ω, HasFDerivAt (fun y ↦ Real.log (p y)) (s x) x
-  /-- The score `s` is continuous on `Ω`. -/
+  /-- (iv) `s` is continuous on `Ω`. -/
   continuousOn_score : ContinuousOn s Ω
 
-/-- **The assumptions on the kernel** `k(x, y) = ⟪Φ x, Φ y⟫` (Appendix A.2 of [Serre2025]): the
-feature map `Φ` is `C¹`, `K`-Lipschitz and bounded by `C`, and it vanishes on the frontier of `Ω`.
-The last condition makes every function of `𝓗` vanish on the frontier of `Ω`, so that the
-particles stay in `Ω`. -/
-structure AdmissibleFeatureMap (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (Ω : Set (EuclideanSpace ℝ (Fin d))) (K C : ℝ≥0) : Prop where
-  /-- `Φ` is continuously differentiable. -/
-  contDiff : ContDiff ℝ 1 Φ
-  /-- `Φ` is `K`-Lipschitz. -/
-  lipschitzWith : LipschitzWith K Φ
-  /-- `Φ` is bounded by `C`. -/
-  norm_le : ∀ y, ‖Φ y‖ ≤ C
-  /-- `Φ` vanishes on the frontier of `Ω`. -/
-  eq_zero_of_mem_frontier : ∀ y ∈ frontier Ω, Φ y = 0
-
-/-- **The standing assumptions** (Section 3 and Appendix A.2 of [Serre2025]) on the space `Ω`, the
-target `π = p · λ|_Ω` with score `s`, and the kernel given by the feature map `Φ`. -/
-structure StandingAssumptions (Ω : Set (EuclideanSpace ℝ (Fin d)))
-    (π : Measure (EuclideanSpace ℝ (Fin d))) (p : EuclideanSpace ℝ (Fin d) → ℝ)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (Φ : EuclideanSpace ℝ (Fin d) → H₀) (K C : ℝ≥0) : Prop where
-  /-- **The space.** The domain `Ω` is compact. -/
-  isCompact : IsCompact Ω
-  /-- **The target.** `π = p · λ|_Ω` satisfies `SVGD.AdmissibleTarget`. -/
-  target : AdmissibleTarget Ω π p s
-  /-- **The kernel.** The feature map `Φ` satisfies `SVGD.AdmissibleFeatureMap`. -/
-  kernel : AdmissibleFeatureMap Φ Ω K C
-
-variable {Ω : Set (EuclideanSpace ℝ (Fin d))} {π μ : Measure (EuclideanSpace ℝ (Fin d))}
+variable {Ω : Set (EuclideanSpace ℝ (Fin d))} {π ρ : Measure (EuclideanSpace ℝ (Fin d))}
   {p : EuclideanSpace ℝ (Fin d) → ℝ}
   {s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d))}
-  {Φ : EuclideanSpace ℝ (Fin d) → H₀} {K C B : ℝ≥0} {m : ℝ → 𝓗[d, H₀]}
 
-/-- A measure at finite Kullback–Leibler divergence from `π` is carried by `Ω`. -/
-private theorem StandingAssumptions.ae_mem (hS : StandingAssumptions Ω π p s Φ K C)
-    (hKL : klDiv μ π ≠ ∞) : ∀ᵐ x ∂μ, x ∈ Ω :=
-  InformationTheory.ae_mem_of_klDiv_ne_top hS.isCompact.measurableSet
-    (hS.target.eq_withDensity ▸ hKL)
+/-- The target distribution is carried by `Ω`, i.e. `π(ℝᵈ \ Ω) = 0`. -/
+theorem TargetAssumption.ae_mem (hπ : TargetAssumption Ω π p s) (hΩ : MeasurableSet Ω) :
+    ∀ᵐ x ∂π, x ∈ Ω :=
+  hπ.eq_withDensity ▸ ae_withDensity_restrict_mem hΩ _
 
-/-- The flow of a bounded continuous curve of `𝓗` keeps the measures carried by `Ω` on `Ω`. -/
-private theorem StandingAssumptions.ae_map_trajectory_mem
-    (hS : StandingAssumptions Ω π p s Φ K C) (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hμ : ∀ᵐ x ∂μ, x ∈ Ω) (t : ℝ) :
-    ∀ᵐ y ∂μ.map (trajectory Φ m 0 · t), y ∈ Ω :=
-  SVGD.ae_map_trajectory_mem hm hmB hS.kernel.lipschitzWith hS.isCompact.measurableSet
-    hS.kernel.eq_zero_of_mem_frontier hμ 0 t
+/-- Under Assumption 1, if `KL(ρ ‖ π) < ∞`, then `ρ` is carried by `Ω`. -/
+theorem TargetAssumption.ae_mem_of_klDiv_ne_top (hπ : TargetAssumption Ω π p s)
+    (hΩ : MeasurableSet Ω) (hKL : klDiv ρ π ≠ ∞) : ∀ᵐ x ∂ρ, x ∈ Ω :=
+  InformationTheory.ae_mem_of_klDiv_ne_top hΩ (hπ.eq_withDensity ▸ hKL)
 
 end SVGD
 
-/-! ## Appendix A.2.2: Stein's method -/
+/-! ## Stein's method
+
+### The Stein operator and Stein's identity -/
 
 namespace ProbabilityTheory
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- **The Stein operator** (Appendix A.2.2 of [Serre2025]) with score `s : E → E →L[ℝ] ℝ`, applied
-to the vector field `φ : E → E`: `𝒜_s φ (x) = s x (φ x) + div φ (x)`. When `s` is the logarithmic
-derivative of a density `p`, this is `𝒜_p φ = ∇ log p ᵀ φ + ∇ · φ`. -/
-def steinOperator (s : E → StrongDual ℝ E) (φ : E → E) (x : E) : ℝ :=
-  s x (φ x) + divergence ℝ φ x
+/-- **Definition 1 (Stein operator).** The Stein operator of score `s : E → E*` maps a vector field
+`v : E → E` to the function `𝒜_s v(x) = s(x)(v(x)) + ∇ · v(x)`. It is meaningful at every `x` where
+`v` is differentiable, and `E` is meant to be finite-dimensional. -/
+def steinOperator (s : E → StrongDual ℝ E) (v : E → E) (x : E) : ℝ :=
+  s x (v x) + divergence ℝ v x
 
 /-- The divergence (`CompactSVGD/Definitions.lean`) is the trace of the derivative. -/
-example (φ : E → E) (x : E) : divergence ℝ φ x = LinearMap.trace ℝ E (fderiv ℝ φ x) :=
+example (v : E → E) (x : E) : divergence ℝ v x = LinearMap.trace ℝ E (fderiv ℝ v x) :=
   rfl
-
-variable [MeasurableSpace E]
-
-/-- **The Stein class** of the density `p` with respect to `μ` (Definition A.2 of [Serre2025]): the
-vector fields `φ` such that `p • φ` is differentiable `μ`-almost everywhere, with a `μ`-integrable
-divergence of integral `0`. With `μ = λ|_Ω` and a regular boundary `∂Ω`, the divergence theorem
-turns the last condition into the boundary condition `∮_{∂Ω} p φ · n dS = 0` of Definition A.2 of
-[Serre2025]. -/
-def steinClass (μ : Measure E) (p : E → ℝ) : Set (E → E) :=
-  {φ | (∀ᵐ x ∂μ, DifferentiableAt ℝ (p • φ) x) ∧
-    Integrable (divergence ℝ (p • φ)) μ ∧ ∫ x, divergence ℝ (p • φ) x ∂μ = 0}
-
-/-- **Stein's identity** (Lemma A.3 of [Serre2025]). Let `p ≥ 0` be a density with score `s`,
-i.e. `Dp = p • s` holds `μ`-almost everywhere, and let `φ` be differentiable `μ`-almost everywhere
-and in the Stein class of `p`. Then the Stein operator `𝒜_s φ` has zero mean under `p · μ`:
-`E_{x ∼ p · μ}[𝒜_s φ (x)] = 0`. -/
-theorem stein_identity [FiniteDimensional ℝ E] {μ : Measure E} {p : E → ℝ}
-    {s : E → StrongDual ℝ E} {φ : E → E} (hp : AEMeasurable p μ) (hp₀ : 0 ≤ᵐ[μ] p)
-    (hs : ∀ᵐ x ∂μ, HasFDerivAt p (p x • s x) x) (hφ : ∀ᵐ x ∂μ, DifferentiableAt ℝ φ x)
-    (hφS : φ ∈ steinClass μ p) :
-    ∫ x, steinOperator s φ x ∂μ.withDensity (fun x ↦ ENNReal.ofReal (p x)) = 0 := by
-  -- Integrating against `p · μ` multiplies the integrand by `p`, and the integral of `∇ · (p φ)`
-  -- vanishes because `φ` is in the Stein class of `p`.
-  rw [integral_withDensity_eq_integral_toReal_smul₀ hp.ennreal_ofReal
-    (.of_forall fun _ ↦ ENNReal.ofReal_lt_top), ← hφS.2.2]
-  -- `p 𝒜_s φ = p ∇ log p ᵀ φ + p ∇ · φ = ∇ p ᵀ φ + p ∇ · φ = ∇ · (p φ)`.
-  refine integral_congr_ae ?_
-  filter_upwards [hp₀, hs, hφ] with x hx₀ hx hφx
-  rw [ENNReal.toReal_ofReal hx₀, smul_eq_mul, divergence_smul_of_hasFDerivAt_self_smul hx hφx,
-    steinOperator]
 
 end ProbabilityTheory
 
-/-! ## Appendix A.2.3: the kernelized Stein discrepancy -/
-
-/-! ### Definition A.4: the product RKHS
-
-The kernel is `k(x, y) = ⟪Φ x, Φ y⟫` and its RKHS is represented by the real Hilbert space `H₀`.
-The product RKHS is `𝓗[d, H₀] = PiLp 2 fun _ : Fin d ↦ H₀`, with
-`⟪f, g⟫_𝓗 = ∑ᵢ ⟪fᵢ, gᵢ⟫_{H₀}`, and `f ∈ 𝓗` acts on `ℝᵈ` as the vector field
-`toVectorField Φ f : y ↦ (⟪fᵢ, Φ y⟫)ᵢ` (both in `CompactSVGD/Definitions.lean`).
-
-The reproducing property `fᵢ(y) = ⟪fᵢ, k(·, y)⟫` thus holds by definition, and its derivative
-form `∂ᵢ fᵢ(y) = ⟪fᵢ, ∂ᵢ k(·, y)⟫` follows from the differentiability of `Φ`; together they give
-`𝒜_π f (x) = ⟪f, ξ_x⟫` (`SVGD.reproducing_property`). Nothing else is used about RKHS: neither the
-uniqueness of the RKHS, nor the integral positive definiteness of `k`, nor the density of `H₀` in
-`L²`. Every RKHS fits this setting, with its canonical feature map `x ↦ k(·, x)`. Conversely, `𝓗`
-may contain elements whose vector field vanishes (those orthogonal to every `Φ y` and `∂ᵢ Φ y`);
-they change neither `𝒜_π f`, nor the KSD, nor `φ*_μ`, nor Stein-universality. -/
+/-! ### First variation of the Kullback–Leibler divergence -/
 
 namespace SVGD
 
-variable {d : ℕ} {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
-  {Φ : EuclideanSpace ℝ (Fin d) → H₀}
+variable {d : ℕ} {Ω : Set (EuclideanSpace ℝ (Fin d))}
+  {π ρ ρ₀ : Measure (EuclideanSpace ℝ (Fin d))} {p : EuclideanSpace ℝ (Fin d) → ℝ}
   {s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d))}
-  {Ω : Set (EuclideanSpace ℝ (Fin d))} {π μ ν : Measure (EuclideanSpace ℝ (Fin d))}
-  {p : EuclideanSpace ℝ (Fin d) → ℝ} {K C B : ℝ≥0} {m : ℝ → 𝓗[d, H₀]}
+  {v : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)} {K_v B : ℝ≥0}
+  {T : ℝ → EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)}
 
-/-- The product RKHS `𝓗` is the Hilbert sum of `d` copies of `H₀`. -/
+private theorem nnnorm_mul_lt_one {ε : ℝ} {K : ℝ≥0} (hε : |ε| * K < 1) : ‖ε‖₊ * K < 1 := by
+  rw [← NNReal.coe_lt_coe, NNReal.coe_mul, coe_nnNorm, Real.norm_eq_abs, NNReal.coe_one]
+  exact hε
+
+section Perturbation
+
+variable {ε : ℝ} (hv : LipschitzWith K_v v) (hε : |ε| * K_v < 1)
+include hv hε
+
+/-- **Lemma 1 (Perturbations of the identity)**, first part. Let `v` be `K_v`-Lipschitz and
+`|ε| K_v < 1`. Then `Ψ = I_d + ε v` is a homeomorphism of `ℝᵈ`. -/
+theorem perturbations_of_identity_isHomeomorph : IsHomeomorph fun x ↦ x + ε • v x := by
+  obtain ⟨e, he⟩ := hv.exists_homeomorph_id_add_smul (nnnorm_mul_lt_one hε)
+  exact he ▸ e.isHomeomorph
+
+/-- **Lemma 1 (Perturbations of the identity)**, second part. If moreover `v` vanishes on `∂Ω`,
+then `Ψ(Ω) = Ω`. -/
+theorem perturbations_of_identity_image (hv₀ : ∀ y ∈ frontier Ω, v y = 0) :
+    (fun x ↦ x + ε • v x) '' Ω = Ω :=
+  hv.image_add_smul_eq_of_forall_frontier_eq_zero (nnnorm_mul_lt_one hε) hv₀
+
+/-- **Lemma 1 (Perturbations of the identity)**, third part. If moreover `v` vanishes on `∂Ω`,
+then `Ψ(Ω°) = Ω°`. -/
+theorem perturbations_of_identity_image_interior (hv₀ : ∀ y ∈ frontier Ω, v y = 0) :
+    (fun x ↦ x + ε • v x) '' interior Ω = interior Ω :=
+  hv.image_add_smul_eq_of_forall_frontier_eq_zero (nnnorm_mul_lt_one hε) fun y hy ↦
+    hv₀ y (frontier_interior_subset hy)
+
+end Perturbation
+
+section Transport
+
+variable [IsProbabilityMeasure ρ] {Ψ : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)}
+  (hΩ : IsCompact Ω) (hπ : TargetAssumption Ω π p s) (hΨ : IsHomeomorph Ψ)
+  (hΨd : ∀ x ∈ Ω, DifferentiableAt ℝ Ψ x) (hΨΩ : Ψ '' Ω = Ω)
+  (hdet : ∀ x ∈ Ω, 0 < (fderiv ℝ Ψ x).det) (hKL : klDiv ρ π ≠ ∞)
+  (hlog : Integrable (fun x ↦ Real.log (fderiv ℝ Ψ x).det) ρ)
+include hΩ hπ hΨ hΨd hΨΩ hdet hKL hlog
+
+/-- **Lemma 2 (Transport of the Kullback–Leibler divergence)**, first part. Suppose that
+Assumption 1 holds. Let `Ψ` be a homeomorphism of `ℝᵈ`, differentiable at every point of `Ω`, such
+that `Ψ(Ω) = Ω` and `det DΨ > 0` on `Ω`. Let `ρ` be a probability measure with `KL(ρ ‖ π) < ∞`
+such that `log det DΨ` is `ρ`-integrable. Then, `KL(Ψ#ρ ‖ π) < ∞`. -/
+theorem transport_kl_ne_top : klDiv (ρ.map Ψ) π ≠ ∞ := by
+  obtain ⟨hπ, -, hp, hpc, hp₀, -, -⟩ := hπ
+  subst hπ
+  exact klDiv_map_ne_top (e := (hΨ.homeomorph Ψ).toMeasurableEquiv) hΩ hp hpc hp₀ hΨd hΨΩ hdet
+    hlog hKL
+
+/-- **Lemma 2 (Transport of the Kullback–Leibler divergence)**, second part. Under the same
+assumptions, `KL(Ψ#ρ ‖ π) = KL(ρ ‖ π) - ∫ (log p(Ψ(x)) - log p(x) + log det DΨ(x)) dρ(x)`. -/
+theorem transport_kl :
+    (klDiv (ρ.map Ψ) π).toReal = (klDiv ρ π).toReal -
+      ∫ x, (Real.log (p (Ψ x)) - Real.log (p x) + Real.log (fderiv ℝ Ψ x).det) ∂ρ := by
+  obtain ⟨hπ, -, hp, hpc, hp₀, -, -⟩ := hπ
+  subst hπ
+  exact toReal_klDiv_map_eq (e := (hΨ.homeomorph Ψ).toMeasurableEquiv) hΩ hp hpc hp₀ hΨd hΨΩ hdet
+    hlog hKL
+
+end Transport
+
+section FirstVariation
+
+variable [IsProbabilityMeasure ρ] (hΩ : IsCompact Ω) (hπ : TargetAssumption Ω π p s)
+  (hv : ContDiff ℝ 1 v) (hvK : LipschitzWith K_v v) (hv₀ : ∀ y ∈ frontier Ω, v y = 0)
+  (hKL : klDiv ρ π ≠ ∞)
+include hΩ hπ hv hvK hv₀ hKL
+
+omit hvK hv₀ in
+/-- **Theorem 1 (First variation of the Kullback–Leibler divergence)**, integrability. Suppose
+that Assumption 1 holds. Let `v` be `C¹` and `K_v`-Lipschitz, with `v = 0` on `∂Ω`, and let `ρ` be a
+probability measure with `KL(ρ ‖ π) < ∞`. Then, `𝒜_s v` is `ρ`-integrable. -/
+theorem first_variation_integrable : Integrable (steinOperator s v) ρ :=
+  ((hπ.continuousOn_score.clm_apply hv.continuous.continuousOn).add
+    hv.continuous_divergence.continuousOn).integrable_of_ae_mem hΩ
+      (hπ.ae_mem_of_klDiv_ne_top hΩ.measurableSet hKL)
+
+/-- **Theorem 1 (First variation of the Kullback–Leibler divergence)**, finiteness. Under the same
+assumptions, there is `ε₀ > 0` such that `KL((I_d + ε v)#ρ ‖ π) < ∞` for every `ε ∈ (-ε₀, ε₀)`. -/
+theorem first_variation_ne_top :
+    ∃ ε₀ > (0 : ℝ), ∀ ε ∈ Ioo (-ε₀) ε₀, klDiv (ρ.map fun x ↦ x + ε • v x) π ≠ ∞ := by
+  obtain ⟨hπ, -, hp, hpc, hp₀, -, -⟩ := hπ
+  subst hπ
+  obtain ⟨ε₀, hε₀, h⟩ := Metric.eventually_nhds_iff_ball.1
+    (eventually_klDiv_map_add_smul_ne_top hvK hΩ hp hpc hp₀ hv hv₀ hKL)
+  exact ⟨ε₀, hε₀, fun ε hε ↦ h ε (by rwa [Real.ball_eq_Ioo, zero_sub, zero_add])⟩
+
+/-- **Theorem 1 (First variation of the Kullback–Leibler divergence)**, derivative. Under the same
+assumptions, `h : ε ↦ KL((I_d + ε v)#ρ ‖ π)` is differentiable at `0`, and
+`h'(0) = -E_{x ∼ ρ}[𝒜_s v(x)]`. -/
+theorem first_variation :
+    HasDerivAt (fun ε : ℝ ↦ (klDiv (ρ.map fun x ↦ x + ε • v x) π).toReal)
+      (-∫ x, steinOperator s v x ∂ρ) 0 := by
+  obtain ⟨hπ, -, hp, hpc, hp₀, hs, hsc⟩ := hπ
+  subst hπ
+  exact hasDerivAt_toReal_klDiv_map_add_smul hvK hΩ hp hpc hp₀ hv hv₀ hKL hs hsc
+
+end FirstVariation
+
+section SteinIdentity
+
+variable (hΩ : IsCompact Ω) (hπ : TargetAssumption Ω π p s) (hv : ContDiff ℝ 1 v)
+  (hvK : LipschitzWith K_v v) (hv₀ : ∀ y ∈ frontier Ω, v y = 0)
+include hΩ hπ hv hvK hv₀
+
+omit hvK hv₀ in
+/-- **Corollary 1 (Stein's identity for the target distribution)**, integrability. Suppose that
+Assumption 1 holds, and let `v` be `C¹` and Lipschitz, with `v = 0` on `∂Ω`. Then, `𝒜_s v` is
+`π`-integrable. -/
+theorem stein_identity_integrable : Integrable (steinOperator s v) π :=
+  have := hπ.isProbabilityMeasure
+  first_variation_integrable hΩ hπ hv (by simp)
+
+/-- **Corollary 1 (Stein's identity for the target distribution).** Under the same assumptions,
+`E_{x ∼ π}[𝒜_s v(x)] = 0`. -/
+theorem stein_identity : ∫ x, steinOperator s v x ∂π = 0 := by
+  have := hπ.isProbabilityMeasure
+  -- `h : ε ↦ KL((I_d + ε v)#π ‖ π)` is nonnegative and vanishes at `0`, so `h'(0) = 0`.
+  have hmin : IsLocalMin (fun ε : ℝ ↦ (klDiv (π.map fun x ↦ x + ε • v x) π).toReal) 0 :=
+    .of_forall fun ε ↦ by simp
+  have := hmin.hasDerivAt_eq_zero (first_variation hΩ hπ hv hvK hv₀ (by simp))
+  linarith
+
+end SteinIdentity
+
+/-! ### The Stein discrepancy
+
+The Stein discrepancy `𝕊(ρ, π) = sup_{v ∈ 𝓕} E_{x ∼ ρ}[𝒜_s v(x)]` is only used through its
+kernelized version, `SVGD.kernelSteinDiscrepancy` (Definition 2). -/
+
+/-! ## The kernelized Stein discrepancy
+
+### The kernel -/
+
+variable {H₀ : Type*} [NormedAddCommGroup H₀] [InnerProductSpace ℝ H₀]
+
+/-- **Assumption 2 (Kernel).** The kernel is `k(x, y) = ⟪Φ(x), Φ(y)⟫_{H₀}`, for a feature map
+`Φ : ℝᵈ → H₀` with values in a real Hilbert space `H₀`:
+1. `Φ` is continuously differentiable on `ℝᵈ`;
+2. `Φ` is `K`-Lipschitz;
+3. `‖Φ(y)‖ ≤ C` for every `y ∈ ℝᵈ`;
+4. `Φ(y) = 0` for every `y ∈ ∂Ω`. -/
+structure KernelAssumption (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (Ω : Set (EuclideanSpace ℝ (Fin d))) (K C : ℝ≥0) : Prop where
+  /-- (i) `Φ` is continuously differentiable. -/
+  contDiff : ContDiff ℝ 1 Φ
+  /-- (ii) `Φ` is `K`-Lipschitz. -/
+  lipschitzWith : LipschitzWith K Φ
+  /-- (iii) `Φ` is bounded by `C`. -/
+  norm_le : ∀ y, ‖Φ y‖ ≤ C
+  /-- (iv) `Φ` vanishes on `∂Ω`. -/
+  eq_zero_of_mem_frontier : ∀ y ∈ frontier Ω, Φ y = 0
+
+/-- The space `𝓗 = H₀ᵈ` (`CompactSVGD/Definitions.lean`), with
+`⟪f, g⟫_𝓗 = ∑ᵢ ⟪fᵢ, gᵢ⟫_{H₀}`. -/
 example : 𝓗[d, H₀] = PiLp 2 fun _ : Fin d ↦ H₀ :=
   rfl
 
-/-- `f ∈ 𝓗` acts on `ℝᵈ` as the vector field `y ↦ (⟪fᵢ, Φ y⟫)ᵢ = (⟪fᵢ, k(·, y)⟫)ᵢ`. -/
-example (f : 𝓗[d, H₀]) (y : EuclideanSpace ℝ (Fin d)) :
+/-- The vector field `f_Φ(y) = (⟪f₁, Φ(y)⟫, ..., ⟪f_d, Φ(y)⟫)` of `f ∈ 𝓗`, i.e. `f_Φ = P_f ∘ Φ`. -/
+example (Φ : EuclideanSpace ℝ (Fin d) → H₀) (f : 𝓗[d, H₀]) (y : EuclideanSpace ℝ (Fin d)) :
     toVectorField Φ f y = WithLp.toLp 2 fun i ↦ ⟪f i, Φ y⟫ :=
   rfl
 
-/-! ### The update direction and the kernelized Stein discrepancy -/
+variable {Φ : EuclideanSpace ℝ (Fin d) → H₀} {K C : ℝ≥0}
 
-/-- The element `ξ_x = ∇ log π(x) k(·, x) + ∇_x k(·, x)` of `𝓗` (Appendix A.2.3 of [Serre2025]),
-whose components are `(ξ_x)ᵢ = s x eᵢ • Φ x + ∂ᵢ Φ x`. -/
+/-- By (i) of Assumption 2, every vector field `f_Φ` is continuously differentiable. -/
+theorem KernelAssumption.contDiff_toVectorField (hΦ : KernelAssumption Φ Ω K C)
+    (f : 𝓗[d, H₀]) : ContDiff ℝ 1 (toVectorField Φ f) :=
+  (pairing f).contDiff.comp hΦ.contDiff
+
+/-- By (ii) of Assumption 2, `f_Φ` is `‖f‖ K`-Lipschitz. -/
+theorem KernelAssumption.lipschitzWith_toVectorField (hΦ : KernelAssumption Φ Ω K C)
+    (f : 𝓗[d, H₀]) : LipschitzWith (‖f‖₊ * K) (toVectorField Φ f) :=
+  SVGD.lipschitzWith_toVectorField hΦ.lipschitzWith f
+
+/-- By (iv) of Assumption 2, `f_Φ` vanishes on `∂Ω`. -/
+theorem KernelAssumption.toVectorField_eq_zero (hΦ : KernelAssumption Φ Ω K C)
+    (f : 𝓗[d, H₀]) : ∀ y ∈ frontier Ω, toVectorField Φ f y = 0 := fun y hy ↦
+  toVectorField_eq_zero_of_eq_zero (hΦ.eq_zero_of_mem_frontier y hy)
+
+/-- **The standing assumptions**: `Ω` is compact, and Assumptions 1 and 2 hold. -/
+structure StandingAssumptions (Ω : Set (EuclideanSpace ℝ (Fin d)))
+    (π : Measure (EuclideanSpace ℝ (Fin d))) (p : EuclideanSpace ℝ (Fin d) → ℝ)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (Φ : EuclideanSpace ℝ (Fin d) → H₀) (K C : ℝ≥0) : Prop where
+  /-- The domain `Ω` is compact. -/
+  isCompact : IsCompact Ω
+  /-- Assumption 1 (Target distribution). -/
+  target : TargetAssumption Ω π p s
+  /-- Assumption 2 (Kernel). -/
+  kernel : KernelAssumption Φ Ω K C
+
+theorem StandingAssumptions.measurableSet (hS : StandingAssumptions Ω π p s Φ K C) :
+    MeasurableSet Ω :=
+  hS.isCompact.measurableSet
+
+/-! ### Definition of the kernelized Stein discrepancy -/
+
+/-- **Definition 2 (Kernelized Stein discrepancy).**
+`𝔎(ρ ∣ π) = sup_{f ∈ 𝓗, ‖f‖ ≤ 1} E_{x ∼ ρ}[𝒜_s f_Φ(x)]²`. The supremum is a real supremum, hence
+`0` if the family is unbounded. It is finite for `ρ ∈ 𝒫(Ω)` (Theorem 2). -/
+def kernelSteinDiscrepancy (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (ρ : Measure (EuclideanSpace ℝ (Fin d))) : ℝ :=
+  ⨆ f : closedBall (0 : 𝓗[d, H₀]) 1, (∫ x, steinOperator s (toVectorField Φ f) x ∂ρ) ^ 2
+
+/-- The kernelized Stein discrepancy `𝔎(ρ ∣ π)`, written `𝔎[Φ, s] ρ`: it depends on the target `π`
+only through its score `s`. -/
+scoped notation "𝔎[" Φ ", " s "]" => kernelSteinDiscrepancy Φ s
+
+/-- The kernelized Stein discrepancy is nonnegative. -/
+theorem ksd_nonneg (ρ : Measure (EuclideanSpace ℝ (Fin d))) : 0 ≤ 𝔎[Φ, s] ρ :=
+  Real.iSup_nonneg fun _ ↦ sq_nonneg _
+
+/-- For `f ∈ 𝓗`, `𝒜_s f_Φ` is continuous on `Ω`. -/
+theorem continuousOn_steinOperator (hS : StandingAssumptions Ω π p s Φ K C) (f : 𝓗[d, H₀]) :
+    ContinuousOn (steinOperator s (toVectorField Φ f)) Ω :=
+  (hS.target.continuousOn_score.clm_apply
+    (hS.kernel.contDiff_toVectorField f).continuous.continuousOn).add
+      (hS.kernel.contDiff_toVectorField f).continuous_divergence.continuousOn
+
+/-- `𝔎(π ∣ π) = 0`, by Corollary 1. -/
+theorem ksd_target_eq_zero (hS : StandingAssumptions Ω π p s Φ K C) : 𝔎[Φ, s] π = 0 := by
+  have h (f : 𝓗[d, H₀]) : ∫ x, steinOperator s (toVectorField Φ f) x ∂π = 0 :=
+    stein_identity hS.isCompact hS.target (hS.kernel.contDiff_toVectorField f)
+      (hS.kernel.lipschitzWith_toVectorField f) (hS.kernel.toVectorField_eq_zero f)
+  simp [kernelSteinDiscrepancy, h]
+
+/-! ### The Stein witness -/
+
+/-- The **Stein feature** `ξ_x ∈ 𝓗` of `x`, with components `(ξ_x)ᵢ = s(x)(eᵢ) Φ(x) + DΦ(x)(eᵢ)`. -/
 def steinFeature (Φ : EuclideanSpace ℝ (Fin d) → H₀)
     (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
     (x : EuclideanSpace ℝ (Fin d)) : 𝓗[d, H₀] :=
   WithLp.toLp 2 fun i ↦
     s x (EuclideanSpace.single i 1) • Φ x + fderiv ℝ Φ x (EuclideanSpace.single i 1)
 
-/-- The update direction `φ*_μ = E_{x ∼ μ}[ξ_x]` of SVGD (Equation (3) and Appendix A.2.3 of
-[Serre2025]). It is defined for every measure `μ`, with or without a density. -/
-def direction (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (μ : Measure (EuclideanSpace ℝ (Fin d))) : 𝓗[d, H₀] :=
-  ∫ x, steinFeature Φ s x ∂μ
-
-/-- **The kernelized Stein discrepancy** (Definition A.5 of [Serre2025]):
-`𝔎(μ ∣ π) = sup_{‖f‖_𝓗 ≤ 1} E_{x ∼ μ}[𝒜_π f (x)]²`. The supremum is a real supremum, hence `0`
-if the family is unbounded; it is finite for `μ ∈ 𝒫(Ω)` (Theorem A.7). -/
-def kernelSteinDiscrepancy (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (μ : Measure (EuclideanSpace ℝ (Fin d))) : ℝ :=
-  ⨆ f : closedBall (0 : 𝓗[d, H₀]) 1, (∫ x, steinOperator s (toVectorField Φ f) x ∂μ) ^ 2
-
-/-- The kernelized Stein discrepancy `𝔎(μ ∣ π)` of [Serre2025], written `𝔎[Φ, s] μ`: it depends on
-the target `π` only through its score `s`. -/
-scoped notation "𝔎[" Φ ", " s "]" => kernelSteinDiscrepancy Φ s
-
-/-- The kernelized Stein discrepancy is nonnegative (Theorem A.11 of [Serre2025] uses it). -/
-theorem ksd_nonneg (μ : Measure (EuclideanSpace ℝ (Fin d))) : 0 ≤ 𝔎[Φ, s] μ :=
-  Real.iSup_nonneg fun _ ↦ sq_nonneg _
-
-/-- **The reproducing property** (Appendix A.2.3 of [Serre2025]). For `f ∈ 𝓗`, the reproducing
-properties `fᵢ(x) = ⟪fᵢ, k(·, x)⟫` and `∂ᵢ fᵢ(x) = ⟪fᵢ, ∂ᵢ k(·, x)⟫` give
-`𝒜_π f (x) = ⟪f, ξ_x⟫_𝓗`. -/
-theorem reproducing_property {x : EuclideanSpace ℝ (Fin d)} (hΦ : DifferentiableAt ℝ Φ x)
+/-- **Lemma 3 (Stein feature).** Suppose that the standing assumptions hold. Then,
+`𝒜_s f_Φ(x) = ⟪f, ξ_x⟫_𝓗` for all `x ∈ ℝᵈ` and `f ∈ 𝓗`. -/
+theorem stein_feature (hS : StandingAssumptions Ω π p s Φ K C) (x : EuclideanSpace ℝ (Fin d))
     (f : 𝓗[d, H₀]) : steinOperator s (toVectorField Φ f) x = ⟪f, steinFeature Φ s x⟫ := by
+  -- `f_Φ = P_f ∘ Φ` is differentiable at `x`, and `∇ · f_Φ(x) = ∑ᵢ ⟪fᵢ, DΦ(x)(eᵢ)⟫`.
   have hv : toVectorField Φ f x = ∑ i, ⟪f i, Φ x⟫ • EuclideanSpace.single i (1 : ℝ) := by
     ext j
     simp [Pi.single_apply]
   rw [steinOperator, divergence_euclideanSpace,
-    (hasFDerivAt_toVectorField hΦ.hasFDerivAt).fderiv, hv, map_sum, PiLp.inner_apply,
-    ← Finset.sum_add_distrib]
+    (hasFDerivAt_toVectorField
+      ((hS.kernel.contDiff.differentiable one_ne_zero) x).hasFDerivAt).fderiv,
+    hv, map_sum, PiLp.inner_apply, ← Finset.sum_add_distrib]
   refine Finset.sum_congr rfl fun i _ ↦ ?_
   simp [steinFeature, inner_add_right, inner_smul_right, real_inner_comm, mul_comm]
 
-/-! ### Lemma A.6: regularity of `ξ` -/
-
-section KSD
+section XiRegularity
 
 variable (hS : StandingAssumptions Ω π p s Φ K C)
 include hS
 
-/-- **Regularity of `ξ`** (Lemma A.6 of [Serre2025]): `x ↦ ξ_x` is uniformly continuous from `Ω`
-to `𝓗`. -/
+/-- **Lemma 4 (Regularity of `ξ`)**, (i). The map `x ↦ ξ_x` is uniformly continuous from `Ω` to
+`𝓗`. -/
 theorem xi_regularity_uniformContinuousOn : UniformContinuousOn (steinFeature Φ s) Ω := by
-  -- The components `s x eᵢ • Φ x + ∂ᵢ Φ x` of `ξ_x` are continuous on `Ω`, which is compact.
+  -- The components `s(x)(eᵢ) Φ(x) + DΦ(x)(eᵢ)` are continuous, and `Ω` is compact (Heine–Cantor).
   refine hS.isCompact.uniformContinuousOn_of_continuous
     ((PiLp.continuous_toLp 2 _).comp_continuousOn (continuousOn_pi.2 fun _ ↦ ?_))
   exact ((hS.target.continuousOn_score.clm_apply continuousOn_const).smul
     hS.kernel.contDiff.continuous.continuousOn).add
       ((hS.kernel.contDiff.continuous_fderiv one_ne_zero).continuousOn.clm_apply continuousOn_const)
 
-/-- **Regularity of `ξ`** (Lemma A.6 of [Serre2025]): `B = max_{x ∈ Ω} ‖ξ_x‖_𝓗` is finite. -/
-theorem xi_regularity_exists_bound : ∃ B, ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B :=
-  hS.isCompact.exists_bound_of_continuousOn (xi_regularity_uniformContinuousOn hS).continuousOn
+/-- **Lemma 4 (Regularity of `ξ`)**, (ii). `‖ξ_x‖` is bounded on `Ω`. -/
+theorem xi_regularity_exists_bound : ∃ B : ℝ≥0, ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B := by
+  obtain ⟨B, hB⟩ := hS.isCompact.exists_bound_of_continuousOn
+    (xi_regularity_uniformContinuousOn hS).continuousOn
+  exact ⟨B.toNNReal, fun x hx ↦ (hB x hx).trans (Real.le_coe_toNNReal B)⟩
 
-/-- **Regularity of `ξ`** (Lemma A.6 of [Serre2025]): for every finite measure `ν` on `Ω`,
-`φ*_ν = ∫_Ω ξ_x dν(x)` is well defined in `𝓗`. -/
-theorem xi_regularity_integrable [IsFiniteMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω) :
-    Integrable (steinFeature Φ s) ν :=
-  (xi_regularity_uniformContinuousOn hS).continuousOn.integrable_of_ae_mem hS.isCompact hν
+/-- The image of `Ω` by `x ↦ ξ_x` is compact. -/
+theorem isCompact_image_steinFeature : IsCompact (steinFeature Φ s '' Ω) :=
+  hS.isCompact.image_of_continuousOn (xi_regularity_uniformContinuousOn hS).continuousOn
 
-omit hS in
-/-- **Regularity of `ξ`** (Lemma A.6 of [Serre2025]): `‖φ*_ν‖_𝓗 ≤ B` for every `ν ∈ 𝒫(Ω)`, where
-`B` bounds `‖ξ_x‖_𝓗` on `Ω`. -/
-theorem xi_regularity_norm_direction_le {B : ℝ} (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B)
-    [IsProbabilityMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω) : ‖direction Φ s ν‖ ≤ B := by
-  simpa [direction] using norm_integral_le_of_norm_le_const (hν.mono hB)
+/-- **Lemma 4 (Regularity of `ξ`)**, (iii). For every `ρ ∈ 𝒫(Ω)`, `x ↦ ξ_x` is `ρ`-integrable. -/
+theorem xi_regularity_integrable [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω) :
+    Integrable (steinFeature Φ s) ρ :=
+  (xi_regularity_uniformContinuousOn hS).continuousOn.integrable_of_ae_mem hS.isCompact hρ
 
-/-- **Regularity of `ξ`** (Lemma A.6 of [Serre2025]): `‖φ*_ν(y)‖₂ ≤ B C` for every `ν ∈ 𝒫(Ω)` and
-every `y`, where `B` bounds `‖ξ_x‖_𝓗` on `Ω` and `C` bounds `‖k(·, y)‖_{H₀} = ‖Φ y‖`. -/
-theorem xi_regularity_norm_direction_apply_le {B : ℝ≥0}
-    (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B) [IsProbabilityMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω)
-    (y : EuclideanSpace ℝ (Fin d)) : ‖toVectorField Φ (direction Φ s ν) y‖ ≤ B * C :=
-  norm_toVectorField_le_of_le hS.kernel.norm_le (xi_regularity_norm_direction_le hB hν) y
+end XiRegularity
 
-/-- **Continuity of the Stein operator** (Appendix A.2.3 of [Serre2025]): for `f ∈ 𝓗`, `𝒜_π f` is
-continuous on `Ω`. -/
-theorem continuousOn_steinOperator (f : 𝓗[d, H₀]) :
-    ContinuousOn (steinOperator s (toVectorField Φ f)) Ω :=
-  (continuousOn_const.inner (xi_regularity_uniformContinuousOn hS).continuousOn).congr
-    fun x _ ↦ reproducing_property (hS.kernel.contDiff.differentiable one_ne_zero x) f
+/-- The **Stein witness** `φ*_ρ = E_{x ∼ ρ}[ξ_x]` of `ρ`, a Bochner integral in `𝓗`
+(Theorem 2). -/
+def steinWitness (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (ρ : Measure (EuclideanSpace ℝ (Fin d))) : 𝓗[d, H₀] :=
+  ∫ x, steinFeature Φ s x ∂ρ
 
-/-! ### Theorem A.7: the steepest trajectory -/
+section SteinWitness
 
-section SteepestTrajectory
+variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ]
+  (hρ : ∀ᵐ x ∂ρ, x ∈ Ω)
+include hS hρ
 
-variable [CompleteSpace H₀] [IsProbabilityMeasure μ] (hμ : ∀ᵐ x ∂μ, x ∈ Ω)
-include hμ
+/-- **Theorem 2 (Stein witness)**, existence. Suppose that the standing assumptions hold, and let
+`ρ ∈ 𝒫(Ω)`. Then, `E_{x ∼ ρ}[𝒜_s f_Φ(x)] = ⟪f, φ*_ρ⟫_𝓗` for every `f ∈ 𝓗`. -/
+theorem stein_witness (f : 𝓗[d, H₀]) :
+    ∫ x, steinOperator s (toVectorField Φ f) x ∂ρ = ⟪f, steinWitness Φ s ρ⟫ := by
+  -- `⟪f, ·⟫` commutes with the Bochner integral, and `𝒜_s f_Φ(x) = ⟪f, ξ_x⟫` (Lemma 3).
+  rw [steinWitness, ← integral_inner (xi_regularity_integrable hS hρ) f]
+  exact integral_congr_ae (.of_forall fun x ↦ stein_feature hS x f)
 
-/-- **The steepest trajectory** (Theorem A.7 of [Serre2025]): for every `μ ∈ 𝒫(Ω)` and `f ∈ 𝓗`,
-`E_{x ∼ μ}[𝒜_π f (x)] = ⟪f, φ*_μ⟫_𝓗`. -/
-theorem steepest_trajectory_integral (f : 𝓗[d, H₀]) :
-    ∫ x, steinOperator s (toVectorField Φ f) x ∂μ = ⟪f, direction Φ s μ⟫ := by
-  -- By the reproducing property, `𝒜_π f (x) = ⟪f, ξ_x⟫`, and the integral commutes with `⟪f, ·⟫`.
-  rw [direction, ← integral_inner (xi_regularity_integrable hS hμ) f]
-  exact integral_congr_ae (.of_forall fun x ↦
-    reproducing_property (hS.kernel.contDiff.differentiable one_ne_zero x) f)
+/-- **Theorem 2 (Stein witness)**, uniqueness. Under the same assumptions, `φ*_ρ` is the only
+`f' ∈ 𝓗` such that `E_{x ∼ ρ}[𝒜_s f_Φ(x)] = ⟪f, f'⟫_𝓗` for every `f ∈ 𝓗`. -/
+theorem stein_witness_unique {f' : 𝓗[d, H₀]}
+    (hf' : ∀ f, ∫ x, steinOperator s (toVectorField Φ f) x ∂ρ = ⟪f, f'⟫) :
+    f' = steinWitness Φ s ρ := by
+  -- `⟪f, f' - φ*_ρ⟫ = 0` for every `f`, in particular for `f = f' - φ*_ρ`.
+  have h := hf' (f' - steinWitness Φ s ρ)
+  rw [stein_witness hS hρ] at h
+  rw [← sub_eq_zero, ← inner_self_eq_zero (𝕜 := ℝ), inner_sub_right, ← h, sub_self]
 
-/-- **The steepest trajectory** (Theorem A.7 of [Serre2025]): `φ*_μ / ‖φ*_μ‖_𝓗` maximizes
-`f ↦ E_{x ∼ μ}[𝒜_π f (x)]` on the unit ball of `𝓗`. -/
-theorem steepest_trajectory_isMaxOn :
-    IsMaxOn (fun f : 𝓗[d, H₀] ↦ ∫ x, steinOperator s (toVectorField Φ f) x ∂μ)
-      (closedBall 0 1) (‖direction Φ s μ‖⁻¹ • direction Φ s μ) := by
-  -- By the first part and the Cauchy–Schwarz inequality.
-  simpa only [steepest_trajectory_integral hS hμ] using isMaxOn_inner_closedBall _
+/-- **Theorem 2 (Stein witness)**, (i). On the closed unit ball of `𝓗`, the function
+`f ↦ E_{x ∼ ρ}[𝒜_s f_Φ(x)]` reaches its maximum at `f* = φ*_ρ / ‖φ*_ρ‖_𝓗`, which is `0` when
+`φ*_ρ = 0`. -/
+theorem stein_witness_isMaxOn :
+    IsMaxOn (fun f : 𝓗[d, H₀] ↦ ∫ x, steinOperator s (toVectorField Φ f) x ∂ρ)
+      (closedBall 0 1) (‖steinWitness Φ s ρ‖⁻¹ • steinWitness Φ s ρ) := by
+  -- By the Cauchy–Schwarz inequality.
+  simpa only [stein_witness hS hρ] using isMaxOn_inner_closedBall _
 
-/-- **The steepest trajectory** (Theorem A.7 of [Serre2025]):
-`𝔎(μ ∣ π) = ‖φ*_μ‖²_𝓗`. -/
-theorem steepest_trajectory_ksd : 𝔎[Φ, s] μ = ‖direction Φ s μ‖ ^ 2 := by
-  simp only [kernelSteinDiscrepancy, steepest_trajectory_integral hS hμ]
+/-- **Theorem 2 (Stein witness)**, (ii). `𝔎(ρ ∣ π) = ‖φ*_ρ‖²_𝓗`. -/
+theorem stein_witness_ksd : 𝔎[Φ, s] ρ = ‖steinWitness Φ s ρ‖ ^ 2 := by
+  simp only [kernelSteinDiscrepancy, stein_witness hS hρ]
   exact iSup_closedBall_inner_sq _
 
-/-- **The steepest trajectory** (Theorem A.7 of [Serre2025]):
-`𝔎(μ ∣ π) = E_{x ∼ μ}[𝒜_π φ*_μ (x)]`. -/
-theorem steepest_trajectory_ksd_eq_integral :
-    𝔎[Φ, s] μ = ∫ x, steinOperator s (toVectorField Φ (direction Φ s μ)) x ∂μ := by
-  rw [steepest_trajectory_ksd hS hμ, steepest_trajectory_integral hS hμ, real_inner_self_eq_norm_sq]
+/-- **Theorem 2 (Stein witness)**, (ii). `𝔎(ρ ∣ π) = E_{x ∼ ρ}[𝒜_s (φ*_ρ)_Φ(x)]`. -/
+theorem stein_witness_ksd_eq_integral :
+    𝔎[Φ, s] ρ = ∫ x, steinOperator s (toVectorField Φ (steinWitness Φ s ρ)) x ∂ρ := by
+  rw [stein_witness_ksd hS hρ, stein_witness hS hρ, real_inner_self_eq_norm_sq]
 
-end SteepestTrajectory
+/-- `E_{x ∼ ρ}[𝒜_s f_Φ(x)]² ≤ 𝔎(ρ ∣ π)` for every `f` of the closed unit ball of `𝓗`
+(Definition 2). -/
+theorem sq_integral_steinOperator_le_ksd {f : 𝓗[d, H₀]} (hf : ‖f‖ ≤ 1) :
+    (∫ x, steinOperator s (toVectorField Φ f) x ∂ρ) ^ 2 ≤ 𝔎[Φ, s] ρ := by
+  -- `|⟪f, φ*_ρ⟫| ≤ ‖f‖ ‖φ*_ρ‖ ≤ ‖φ*_ρ‖`, by the Cauchy–Schwarz inequality.
+  rw [stein_witness hS hρ, stein_witness_ksd hS hρ]
+  have h : |⟪f, steinWitness Φ s ρ⟫| ≤ ‖steinWitness Φ s ρ‖ :=
+    (abs_real_inner_le_norm _ _).trans (by
+      simpa using mul_le_mul_of_nonneg_right hf (norm_nonneg (steinWitness Φ s ρ)))
+  simpa [sq_abs] using pow_le_pow_left₀ (abs_nonneg _) h 2
 
-/-! ### Theorem A.8: the steepest descent of the Kullback–Leibler divergence -/
+end SteinWitness
 
-omit hS in
-/-- The first variation of the Kullback–Leibler divergence to `π` at `μ` along `f ∈ 𝓗`
-(Theorem A.8 of [Serre2025]): `∇_ε KL(T_ε(f)#μ ‖ π)|_{ε=0}`, where `T_ε(f) = I_d + ε f` and `f` acts
-through its vector field. It is `0` if this map is not differentiable at `0`. -/
-def klFirstVariation (Φ : EuclideanSpace ℝ (Fin d) → H₀) (π μ : Measure (EuclideanSpace ℝ (Fin d)))
-    (f : 𝓗[d, H₀]) : ℝ :=
-  deriv (fun ε : ℝ ↦ (klDiv (μ.map fun x ↦ x + ε • toVectorField Φ f x) π).toReal) 0
+/-- `‖φ*_ρ‖_𝓗 ≤ B` for `ρ ∈ 𝒫(Ω)`, where `B` bounds `‖ξ_x‖_𝓗` on `Ω`. -/
+theorem norm_steinWitness_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B)
+    [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω) : ‖steinWitness Φ s ρ‖ ≤ B := by
+  simpa [steinWitness] using norm_integral_le_of_norm_le_const (hρ.mono hB)
+
+/-- `‖(φ*_ρ)_Φ(y)‖ ≤ B C` for `ρ ∈ 𝒫(Ω)` and `y ∈ ℝᵈ`. -/
+theorem norm_toVectorField_steinWitness_le (hS : StandingAssumptions Ω π p s Φ K C)
+    (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B) [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω)
+    (y : EuclideanSpace ℝ (Fin d)) : ‖toVectorField Φ (steinWitness Φ s ρ) y‖ ≤ B * C :=
+  norm_toVectorField_le_of_le hS.kernel.norm_le (norm_steinWitness_le hB hρ) y
+
+/-- The Stein witness of `π` vanishes, as `𝔎(π ∣ π) = 0`. -/
+theorem steinWitness_target_eq_zero [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C) :
+    steinWitness Φ s π = 0 := by
+  have := hS.target.isProbabilityMeasure
+  have h := stein_witness_ksd hS (hS.target.ae_mem hS.measurableSet)
+  rwa [ksd_target_eq_zero hS, eq_comm, sq_eq_zero_iff, norm_eq_zero] at h
+
+/-! ## The steepest descent of the KL divergence -/
+
+/-- The first variation `h'_f(0)` of the Kullback–Leibler divergence to `π` at `ρ` along `f ∈ 𝓗`,
+where `h_f(ε) = KL((I_d + ε f_Φ)#ρ ‖ π)`. It is `0` if `h_f` is not differentiable at `0`. -/
+def klFirstVariation (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (π ρ : Measure (EuclideanSpace ℝ (Fin d))) (f : 𝓗[d, H₀]) : ℝ :=
+  deriv (fun ε : ℝ ↦ (klDiv (ρ.map fun x ↦ x + ε • toVectorField Φ f x) π).toReal) 0
 
 section KLSteepestDescent
 
-variable [CompleteSpace H₀] [IsProbabilityMeasure μ] (hKL : klDiv μ π ≠ ∞)
-include hKL
+variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ]
+  (hKL : klDiv ρ π ≠ ∞)
+include hS hKL
 
-/-- **The KL steepest descent trajectory** (Theorem A.8 of [Serre2025]): for a probability
-measure `μ` with `KL(μ ‖ π) < ∞` and `f ∈ 𝓗`, the map `ε ↦ KL((I_d + ε f)#μ ‖ π)` is
-differentiable at `0`, with derivative `-⟪f, φ*_μ⟫_𝓗`. -/
+omit [CompleteSpace H₀] in
+/-- **Theorem 3 (KL steepest descent)**, (i), finiteness. Suppose that the standing assumptions
+hold, and let `ρ` be a probability measure with `KL(ρ ‖ π) < ∞`. For every `f ∈ 𝓗`, `h_f` is
+real-valued on a neighborhood of `0`. -/
+theorem kl_steepest_descent_ne_top (f : 𝓗[d, H₀]) :
+    ∀ᶠ ε in 𝓝 (0 : ℝ), klDiv (ρ.map fun x ↦ x + ε • toVectorField Φ f x) π ≠ ∞ := by
+  obtain ⟨ε₀, hε₀, h⟩ := first_variation_ne_top hS.isCompact hS.target
+    (hS.kernel.contDiff_toVectorField f) (hS.kernel.lipschitzWith_toVectorField f)
+    (hS.kernel.toVectorField_eq_zero f) hKL
+  filter_upwards [Ioo_mem_nhds (neg_neg_of_pos hε₀) hε₀] with ε hε using h ε hε
+
+/-- **Theorem 3 (KL steepest descent)**, (i). For every `f ∈ 𝓗`, `h_f` is differentiable at `0`,
+and `h'_f(0) = -⟪f, φ*_ρ⟫_𝓗`. -/
 theorem kl_steepest_descent_hasDerivAt (f : 𝓗[d, H₀]) :
-    HasDerivAt (fun ε : ℝ ↦ (klDiv (μ.map fun x ↦ x + ε • toVectorField Φ f x) π).toReal)
-      (-⟪f, direction Φ s μ⟫) 0 := by
-  obtain ⟨hπ, -, hp, hpc, hp₀, hs, hsc⟩ := hS.target
-  have hμ : ∀ᵐ x ∂μ, x ∈ Ω := hS.ae_mem hKL
-  subst hπ
-  -- The general first variation formula gives `-E_μ[𝒜_π f]`, which is `-⟪f, φ*_μ⟫` by Theorem A.7.
-  have := hasDerivAt_toReal_klDiv_map_add_smul
-    (lipschitzWith_toVectorField hS.kernel.lipschitzWith f) hS.isCompact hp hpc
-    hp₀ hs hsc ((pairing f).contDiff.comp hS.kernel.contDiff)
-    (fun y hy ↦ toVectorField_eq_zero_of_eq_zero (hS.kernel.eq_zero_of_mem_frontier y hy)) hKL
-  have hA : ∫ x, (s x (toVectorField Φ f x) + divergence ℝ (toVectorField Φ f) x) ∂μ =
-      ⟪f, direction Φ s μ⟫ :=
-    steepest_trajectory_integral hS hμ f
-  rwa [hA] at this
+    HasDerivAt (fun ε : ℝ ↦ (klDiv (ρ.map fun x ↦ x + ε • toVectorField Φ f x) π).toReal)
+      (-⟪f, steinWitness Φ s ρ⟫) 0 := by
+  -- Theorem 1 with `v = f_Φ`, and Theorem 2.
+  have h := first_variation hS.isCompact hS.target (hS.kernel.contDiff_toVectorField f)
+    (hS.kernel.lipschitzWith_toVectorField f) (hS.kernel.toVectorField_eq_zero f)
+    hKL
+  rwa [stein_witness hS (hS.target.ae_mem_of_klDiv_ne_top hS.measurableSet hKL)] at h
 
-/-- **The KL steepest descent trajectory** (Theorem A.8 of [Serre2025]): the first variation of
-`KL(· ‖ π)` at `μ` is the linear form `f ↦ -⟪f, φ*_μ⟫_𝓗`. -/
+/-- **Theorem 3 (KL steepest descent)**, (i), as the first variation `h'_f(0) = -⟪f, φ*_ρ⟫_𝓗`. -/
 theorem kl_steepest_descent_eq_inner (f : 𝓗[d, H₀]) :
-    klFirstVariation Φ π μ f = -⟪f, direction Φ s μ⟫ :=
+    klFirstVariation Φ π ρ f = -⟪f, steinWitness Φ s ρ⟫ :=
   (kl_steepest_descent_hasDerivAt hS hKL f).deriv
 
-/-- **The KL steepest descent trajectory** (Theorem A.8 of [Serre2025]): on the unit ball of `𝓗`,
-the first variation of `KL(· ‖ π)` at `μ` is minimized at `φ*_μ / ‖φ*_μ‖_𝓗`. -/
+/-- **Theorem 3 (KL steepest descent)**, (ii). On the closed unit ball of `𝓗`, `f ↦ h'_f(0)`
+reaches its minimum at `f* = φ*_ρ / ‖φ*_ρ‖_𝓗`, which is `0` when `φ*_ρ = 0`. -/
 theorem kl_steepest_descent_isMinOn :
-    IsMinOn (klFirstVariation Φ π μ) (closedBall 0 1)
-      (‖direction Φ s μ‖⁻¹ • direction Φ s μ) := fun f hf ↦ by
-  change klFirstVariation Φ π μ _ ≤ klFirstVariation Φ π μ f
+    IsMinOn (klFirstVariation Φ π ρ) (closedBall 0 1)
+      (‖steinWitness Φ s ρ‖⁻¹ • steinWitness Φ s ρ) := fun f hf ↦ by
+  change klFirstVariation Φ π ρ _ ≤ klFirstVariation Φ π ρ f
   rw [kl_steepest_descent_eq_inner hS hKL, kl_steepest_descent_eq_inner hS hKL,
     inner_inv_norm_smul_self, neg_le_neg_iff]
   exact inner_le_norm_of_mem_closedBall hf
 
-/-- **The KL steepest descent trajectory** (Theorem A.8 of [Serre2025]): if `φ*_μ ≠ 0`, then
-`φ*_μ / ‖φ*_μ‖_𝓗` is the only minimizer of the first variation of `KL(· ‖ π)` at `μ` on the unit
-ball of `𝓗`. -/
-theorem kl_steepest_descent_eq (hφ : direction Φ s μ ≠ 0) {f : 𝓗[d, H₀]}
+/-- **Theorem 3 (KL steepest descent)**, (ii), uniqueness. If `φ*_ρ ≠ 0`, then `f*` is the only
+minimizer of `f ↦ h'_f(0)` on the closed unit ball of `𝓗`. -/
+theorem kl_steepest_descent_eq (hφ : steinWitness Φ s ρ ≠ 0) {f : 𝓗[d, H₀]}
     (hf : f ∈ closedBall 0 1)
-    (hmin : klFirstVariation Φ π μ f =
-      klFirstVariation Φ π μ (‖direction Φ s μ‖⁻¹ • direction Φ s μ)) :
-    f = ‖direction Φ s μ‖⁻¹ • direction Φ s μ := by
+    (hmin : klFirstVariation Φ π ρ f =
+      klFirstVariation Φ π ρ (‖steinWitness Φ s ρ‖⁻¹ • steinWitness Φ s ρ)) :
+    f = ‖steinWitness Φ s ρ‖⁻¹ • steinWitness Φ s ρ := by
   rw [kl_steepest_descent_eq_inner hS hKL, kl_steepest_descent_eq_inner hS hKL,
     inner_inv_norm_smul_self, neg_inj] at hmin
   exact eq_inv_norm_smul_of_inner_eq_norm hφ hf hmin
 
-/-- **The KL steepest descent trajectory** (Theorem A.8 of [Serre2025]): along `φ*_μ`,
-`∇_ε KL((I_d + ε φ*_μ)#μ ‖ π)|_{ε=0} = -𝔎(μ ∣ π)`. -/
-theorem kl_steepest_descent_direction :
-    klFirstVariation Φ π μ (direction Φ s μ) = -𝔎[Φ, s] μ := by
+/-- **Theorem 3 (KL steepest descent)**, (iii). `h'_{φ*_ρ}(0) = -𝔎(ρ ∣ π)`. -/
+theorem kl_steepest_descent_ksd : klFirstVariation Φ π ρ (steinWitness Φ s ρ) = -𝔎[Φ, s] ρ := by
   rw [kl_steepest_descent_eq_inner hS hKL, real_inner_self_eq_norm_sq,
-    steepest_trajectory_ksd hS (hS.ae_mem hKL)]
+    stein_witness_ksd hS (hS.target.ae_mem_of_klDiv_ne_top hS.measurableSet hKL)]
 
 end KLSteepestDescent
 
-end KSD
+/-! ## SVGD in continuous time
 
-/-! ### Definition A.9: Stein-universal kernels -/
+### The continuous-time dynamics -/
 
-/-- **Stein-universal kernels** (Definition A.9 of [Serre2025], stated as a density). The kernel
-is Stein-universal on `Ω` if the functions `𝒜_π f + c`, for `f ∈ 𝓗` and `c ∈ ℝ`, are dense in
-`C(Ω, ℝ)`. As `Ω` is compact, the topology of `C(Ω, ℝ)` is that of uniform convergence on `Ω`.
-
-The constants are needed. Under the standing assumptions, `E_π[𝒜_π f] = 0` for every `f ∈ 𝓗`
-(by Theorem A.7, as `𝔎(π ∣ π) = 0`, see the proof of Proposition 3.2), so the functions `𝒜_π f`
-alone only approximate functions with zero mean under `π`. Integrating against `π` then shows that
-the definition is equivalent to the formulation of Definition A.9 of [Serre2025]: for every
-`φ ∈ C(Ω, ℝ)`, `φ - E_π[φ]` is a uniform limit of functions `𝒜_π f` (not formalized). -/
-def IsSteinUniversal (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+/-- The **drift** `b(x, ρ) = (φ*_ρ)_Φ(x)` of the continuous-time dynamics: the velocity of a
+particle located at `x` when the particles are distributed according to `ρ`. -/
+def drift (Φ : EuclideanSpace ℝ (Fin d) → H₀)
     (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (Ω : Set (EuclideanSpace ℝ (Fin d))) : Prop :=
-  Dense {φ : C(Ω, ℝ) | ∃ f : 𝓗[d, H₀], ∃ c : ℝ,
-    ∀ x : Ω, φ x = steinOperator s (toVectorField Φ f) x + c}
-
-/-! ### The mean-field SVGD flow
-
-The flow `(T_t)_{t ≥ 0}` of Theorems A.11 and 3.1 of [Serre2025] is driven by the update directions
-of its own push-forwards: `∂ₜ T_t(x) = φ*_{μ_t}(T_t(x))` with `μ_t = (T_t)#μ`. We describe it by
-the curve `m : ℝ → 𝓗` of its update directions. The mean-field equation is then `m t = φ*_{μ_t}`
-for `t ≥ 0`, where `T_t = trajectory Φ m 0 · t` is the flow of the vector field of `m`.
-
-Under the standing assumptions, the mean-field equation has a solution (`SVGD.exists_meanField`),
-with no Lipschitz condition on the score. It is a fixed point of `G : m ↦ (t ↦ φ*_{(Xᵐₜ)#ν})`,
-where `Xᵐ` is the flow of `m`. The map `G` is continuous, its images are equicontinuous and lie in
-the compact closed convex hull of `ξ(Ω)`, and `G m` at time `t` only depends on `m` before `t`, so
-it has a fixed point on every compact interval by Tonelli's argument. The solutions on the
-intervals `[n, n + 1]` are then concatenated. The uniqueness of the solution is not claimed:
-`SVGD.meanFieldCurve` picks one of them, and the results below hold for it. -/
-
-/-- The trajectories of a curve `m` in `𝓗` are the global solutions of
-`x' = toVectorField Φ (m t) x` (`CompactSVGD/Definitions.lean`). -/
-example (t₀ : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
-    trajectory Φ m t₀ x = ODE.globalSolution (fun t ↦ toVectorField Φ (m t)) t₀ x :=
-  rfl
-
-open Classical in
-/-- `ODE.globalSolution v t₀ x` (`CompactSVGD/Definitions.lean`) is a solution of `α' t = v t (α t)`
-with `α t₀ = x`, chosen with the axiom of choice, or the constant curve `x` if there is none. -/
-example {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] (v : ℝ → E → E) (t₀ : ℝ) (x : E) :
-    ODE.globalSolution v t₀ x =
-      if h : ∃ α : ℝ → E, α t₀ = x ∧ IsIntegralCurve α v then h.choose else fun _ ↦ x :=
-  rfl
-
-/-- **The mean-field SVGD equation** from `μ` for a curve `m : ℝ → 𝓗`: `m t = φ*_{μ_t}` for every
-`t ≥ 0`, where `μ_t = (T_t)#μ` and `T_t = trajectory Φ m 0 · t` is the flow of the vector field of
-`m`. -/
-def IsMeanFieldCurve (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (μ : Measure (EuclideanSpace ℝ (Fin d))) (m : ℝ → 𝓗[d, H₀]) : Prop :=
-  ∀ t, 0 ≤ t → m t = direction Φ s (μ.map (trajectory Φ m 0 · t))
-
-/-- The mean-field SVGD equation, unfolded. -/
-example :
-    IsMeanFieldCurve Φ s μ m = ∀ t, 0 ≤ t → m t = direction Φ s (μ.map (trajectory Φ m 0 · t)) :=
-  rfl
-
-open Classical in
-/-- **The mean-field SVGD curve** from `μ`: a continuous bounded solution `m : ℝ → 𝓗` of the
-mean-field SVGD equation `SVGD.IsMeanFieldCurve Φ s μ m`, i.e. `m t = φ*_{μ_t}` for every `t ≥ 0`,
-where `μ_t = (T_t)#μ` and `T_t = trajectory Φ m 0 · t`. Such a curve exists under the standing
-assumptions for `μ ∈ 𝒫(Ω)` (`SVGD.exists_meanField`). As its uniqueness is not claimed, this
-definition picks one with the axiom of choice; it is `0` if there is none. -/
-def meanFieldCurve (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (μ : Measure (EuclideanSpace ℝ (Fin d))) : ℝ → 𝓗[d, H₀] :=
-  if h : ∃ m : ℝ → 𝓗[d, H₀], Continuous m ∧ (∃ B : ℝ≥0, ∀ t, ‖m t‖ ≤ B) ∧
-      IsMeanFieldCurve Φ s μ m then h.choose else 0
-
-/-- **The mean-field SVGD flow** `T_t` from `μ`: the trajectories, from time `0`, of the vector
-field of the mean-field SVGD curve `SVGD.meanFieldCurve Φ s μ`. -/
-def meanFieldFlow (Φ : EuclideanSpace ℝ (Fin d) → H₀)
-    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
-    (μ : Measure (EuclideanSpace ℝ (Fin d))) (t : ℝ) (x : EuclideanSpace ℝ (Fin d)) :
+    (ρ : Measure (EuclideanSpace ℝ (Fin d))) (x : EuclideanSpace ℝ (Fin d)) :
     EuclideanSpace ℝ (Fin d) :=
-  trajectory Φ (meanFieldCurve Φ s μ) 0 x t
+  toVectorField Φ (steinWitness Φ s ρ) x
 
-/-- The mean-field SVGD curve is continuous (so is its value `0` when there is no solution). -/
-theorem continuous_meanFieldCurve : Continuous (meanFieldCurve Φ s μ) := by
-  rw [meanFieldCurve]
-  split_ifs with h
-  exacts [h.choose_spec.1, continuous_const]
+/-- **A solution of the continuous-time SVGD equation** from `ρ₀`: a family `(T_t)_{t ≥ 0}` of
+continuous maps from `ℝᵈ` to `ℝᵈ` such that `T_0 = I_d`, `ρ_t = (T_t)#ρ₀ ∈ 𝒫(Ω)` for every
+`t ≥ 0`, and `d/dt T_t(x) = b(T_t(x), ρ_t)` for all `x ∈ ℝᵈ` and `t ≥ 0`, with a right derivative
+at `t = 0`. -/
+structure IsSolution (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (Ω : Set (EuclideanSpace ℝ (Fin d))) (ρ₀ : Measure (EuclideanSpace ℝ (Fin d)))
+    (T : ℝ → EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)) : Prop where
+  /-- Every `T_t` is continuous. -/
+  continuous : ∀ t, 0 ≤ t → Continuous (T t)
+  /-- `T_0 = I_d`. -/
+  zero : T 0 = id
+  /-- `ρ_t = (T_t)#ρ₀` is carried by `Ω`. -/
+  ae_mem : ∀ t, 0 ≤ t → ∀ᵐ y ∂ρ₀.map (T t), y ∈ Ω
+  /-- The continuous-time SVGD equation `d/dt T_t(x) = b(T_t(x), ρ_t)`, with a right derivative at
+  `0`. -/
+  hasDerivWithinAt : ∀ x t, 0 ≤ t →
+    HasDerivWithinAt (T · x) (drift Φ s (ρ₀.map (T t)) (T t x)) (Ici 0) t
 
-/-- The mean-field SVGD curve is bounded. -/
-theorem exists_norm_meanFieldCurve_le : ∃ B : ℝ≥0, ∀ t, ‖meanFieldCurve Φ s μ t‖ ≤ B := by
-  rw [meanFieldCurve]
-  split_ifs with h
-  exacts [h.choose_spec.2.1, ⟨0, fun _ ↦ by simp⟩]
+/-! ### Existence of a solution
 
-/-- **The mean-field SVGD flow starts at the identity**: `T_0 = I_d`. -/
-theorem meanFieldFlow_zero (hS : StandingAssumptions Ω π p s Φ K C) (x : EuclideanSpace ℝ (Fin d)) :
-    meanFieldFlow Φ s μ 0 x = x :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  trajectory_self continuous_meanFieldCurve hmB hS.kernel.lipschitzWith 0 x
+Theorem 4 (Existence of the continuous-time dynamics), `SVGD.exists_continuous_time_dynamics`, is
+proved below, after the lemmas of its proof.
 
-/-- **The mean-field SVGD flow maps are homeomorphisms of `Ω`.** -/
-theorem exists_homeomorph_meanFieldFlow (hS : StandingAssumptions Ω π p s Φ K C) (t : ℝ) :
-    ∃ e : Ω ≃ₜ Ω, ∀ x : Ω, (e x : EuclideanSpace ℝ (Fin d)) = meanFieldFlow Φ s μ t x :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  exists_homeomorph_trajectory continuous_meanFieldCurve hmB hS.kernel.lipschitzWith
-    hS.kernel.eq_zero_of_mem_frontier 0 t
+### Strategy of the proof of Theorem 4
 
-section MeanFieldFlow
+A **candidate** is a continuous and bounded curve `m : [0, ∞) → 𝓗`. At time `t`, it gives the
+velocity `m(t)_Φ(y)` to a particle located at `y`. The position at time `t` of the particle that
+starts from `x` is `T^m_t(x) = trajectory Φ m 0 x t` (`CompactSVGD/Definitions.lean`). -/
 
-variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C)
+/-- The positions `T^m_t(x)` are the global solutions of `α' = m(t)_Φ(α)` with `α(0) = x`. -/
+example (m : ℝ → 𝓗[d, H₀]) (x : EuclideanSpace ℝ (Fin d)) :
+    trajectory Φ m 0 x = ODE.integralCurveThrough (fun t ↦ toVectorField Φ (m t)) 0 x :=
+  rfl
+
+/-! ### From the drift to the positions -/
+
+section Positions
+
+variable (hS : StandingAssumptions Ω π p s Φ K C) {R : ℝ≥0} {m : ℝ → 𝓗[d, H₀]}
+  (hm : Continuous m) (hmR : ∀ t, ‖m t‖ ≤ R)
+include hS hm hmR
+
+/-- **Lemma 5 (Positions for a given drift)**, existence. Suppose that the standing assumptions
+hold, and let `m` be a continuous curve with `‖m(t)‖_𝓗 ≤ R`. Then, `t ↦ T^m_t(x)` solves
+`d/dt T^m_t(x) = m(t)_Φ(T^m_t(x))`. -/
+theorem positions_hasDerivAt (x : EuclideanSpace ℝ (Fin d)) (t : ℝ) :
+    HasDerivAt (trajectory Φ m 0 x) (toVectorField Φ (m t) (trajectory Φ m 0 x t)) t :=
+  hasDerivAt_trajectory hm hmR hS.kernel.lipschitzWith 0 x t
+
+/-- **Lemma 5 (Positions for a given drift)**, initial condition. `T^m_0(x) = x`. -/
+theorem positions_zero (x : EuclideanSpace ℝ (Fin d)) : trajectory Φ m 0 x 0 = x :=
+  trajectory_self hm hmR hS.kernel.lipschitzWith 0 x
+
+/-- **Lemma 5 (Positions for a given drift)**, uniqueness. The solution of
+`d/dt α(t) = m(t)_Φ(α(t))`, `α(0) = x`, is unique on `[0, ∞)`. -/
+theorem positions_unique {α : ℝ → EuclideanSpace ℝ (Fin d)} {x : EuclideanSpace ℝ (Fin d)}
+    (hα₀ : α 0 = x)
+    (hα : ∀ t, 0 ≤ t → HasDerivWithinAt α (toVectorField Φ (m t) (α t)) (Ici 0) t) {t : ℝ}
+    (ht : 0 ≤ t) : α t = trajectory Φ m 0 x t :=
+  ODE_solution_unique_of_mem_Icc_right (v := fun t ↦ toVectorField Φ (m t)) (s := fun _ ↦ univ)
+    (fun τ _ ↦
+      (lipschitzWith_toVectorField_of_norm_le hS.kernel.lipschitzWith (hmR τ)).lipschitzOnWith)
+    (fun τ hτ ↦ (hα τ hτ.1).continuousWithinAt.mono fun _ h ↦ h.1)
+    (fun τ hτ ↦ (hα τ hτ.1).mono (Ici_subset_Ici.2 hτ.1)) (fun _ _ ↦ mem_univ _)
+    (continuous_trajectory hm hmR hS.kernel.lipschitzWith 0 x).continuousOn
+    (fun τ _ ↦ (positions_hasDerivAt hS hm hmR x τ).hasDerivWithinAt) (fun _ _ ↦ mem_univ _)
+    (by rw [hα₀, positions_zero hS hm hmR]) ⟨ht, le_rfl⟩
+
+/-- **Lemma 5 (Positions for a given drift)**, (i). `T^m_t` is a homeomorphism of `ℝᵈ`. -/
+theorem positions_isHomeomorph (t : ℝ) : IsHomeomorph (trajectory Φ m 0 · t) :=
+  isHomeomorph_trajectory hm hmR hS.kernel.lipschitzWith 0 t
+
+/-- **Lemma 5 (Positions for a given drift)**, (i). `T^m_t(Ω) = Ω`. -/
+theorem positions_image (t : ℝ) : (trajectory Φ m 0 · t) '' Ω = Ω := by
+  -- A trajectory that meets `Ω` stays in `Ω`, and `T^m_t` is inverted by following the
+  -- trajectories backward.
+  have hK := hS.kernel
+  refine (image_subset_iff.2 fun x hx ↦ trajectory_mem hm hmR hK.lipschitzWith
+    hK.eq_zero_of_mem_frontier hx t).antisymm fun y hy ↦ ?_
+  exact ⟨trajectory Φ m t y 0,
+    trajectory_mem hm hmR hK.lipschitzWith hK.eq_zero_of_mem_frontier hy 0,
+    trajectory_trajectory_apply hm hmR hK.lipschitzWith t 0 y⟩
+
+/-- **Lemma 5 (Positions for a given drift)**, (ii). `‖T^m_t(x) - T^m_{t'}(x)‖ ≤ R C |t - t'|`. -/
+theorem positions_dist_le (x : EuclideanSpace ℝ (Fin d)) (t t' : ℝ) :
+    dist (trajectory Φ m 0 x t) (trajectory Φ m 0 x t') ≤ R * C * |t - t'| := by
+  have := (lipschitzWith_trajectory hm hmR hS.kernel.lipschitzWith hS.kernel.norm_le 0
+    x).dist_le_mul t t'
+  rwa [Real.dist_eq, NNReal.coe_mul] at this
+
+/-- **Lemma 5 (Positions for a given drift)**, (iii). Let `m'` be another continuous curve with
+`‖m'(t)‖_𝓗 ≤ R`. If `‖m(r) - m'(r)‖_𝓗 ≤ Δ` for `r ∈ [0, t]`, then
+`‖T^m_t(x) - T^{m'}_t(x)‖ ≤ C t e^{R K t} Δ`. -/
+theorem positions_dist_le_of_dist_le {m' : ℝ → 𝓗[d, H₀]} (hm' : Continuous m')
+    (hmR' : ∀ t, ‖m' t‖ ≤ R) {t Δ : ℝ} (ht : 0 ≤ t) (hΔ : ∀ r ∈ Icc 0 t, dist (m r) (m' r) ≤ Δ)
+    (x : EuclideanSpace ℝ (Fin d)) :
+    dist (trajectory Φ m 0 x t) (trajectory Φ m' 0 x t) ≤ C * t * Real.exp (R * K * t) * Δ := by
+  -- Grönwall's inequality, with a zero initial gap.
+  have hΔ₀ : 0 ≤ Δ := dist_nonneg.trans (hΔ 0 ⟨le_rfl, ht⟩)
+  have h := dist_trajectory_trajectory_le_of_dist_le hm hmR hS.kernel.lipschitzWith
+    hS.kernel.norm_le hm' hmR' ht (fun τ hτ ↦ hΔ τ (Ico_subset_Icc_self hτ)) x
+  rw [sub_zero] at h
+  exact h.trans ((TauCeti.gronwallBound_zero_le_mul_exp (x := t) (by positivity)
+    (by positivity)).trans_eq (by ring))
+
+end Positions
+
+/-! ### From the positions to the drift -/
+
+/-- The map `G_{ρ₀}(m) : t ↦ φ*_{(T^m_t)#ρ₀}`, which sends a candidate `m` to the drift that SVGD
+prescribes for the positions that `m` produces. -/
+def fixedPointMap (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (ρ₀ : Measure (EuclideanSpace ℝ (Fin d))) (m : ℝ → 𝓗[d, H₀]) (t : ℝ) : 𝓗[d, H₀] :=
+  steinWitness Φ s (ρ₀.map (trajectory Φ m 0 · t))
+
+/-- A candidate `m` is **consistent** when `m = G_{ρ₀}(m)`, i.e. `m(t) = φ*_{(T^m_t)#ρ₀}` for every
+`t ≥ 0`, i.e. `m` is a fixed point of `G_{ρ₀}`. -/
+def IsConsistent (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (ρ₀ : Measure (EuclideanSpace ℝ (Fin d))) (m : ℝ → 𝓗[d, H₀]) : Prop :=
+  ∀ t, 0 ≤ t → m t = fixedPointMap Φ s ρ₀ m t
+
+/-- The set `𝒲` of Lemma 6: the closed convex hull of `{ξ_x | x ∈ Ω}` in `𝓗`. -/
+def witnessSet (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (Ω : Set (EuclideanSpace ℝ (Fin d))) : Set 𝓗[d, H₀] :=
+  closedConvexHull ℝ (steinFeature Φ s '' Ω)
+
+/-- **Lemma 6 (Set of the Stein witnesses)**, compactness. Suppose that the standing assumptions
+hold. Then, `𝒲` is compact. -/
+theorem witness_set_isCompact [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C) :
+    IsCompact (witnessSet Φ s Ω) :=
+  (isCompact_image_steinFeature hS).closedConvexHull
+
+/-- **Lemma 6 (Set of the Stein witnesses)**, bound. `‖f‖_𝓗 ≤ B` for every `f ∈ 𝒲`, where `B`
+bounds `‖ξ_x‖_𝓗` on `Ω`. -/
+theorem witness_set_norm_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B) {f : 𝓗[d, H₀]}
+    (hf : f ∈ witnessSet Φ s Ω) : ‖f‖ ≤ B := by
+  -- The closed ball of radius `B` is closed and convex, and it contains every `ξ_x`.
+  have h : witnessSet Φ s Ω ⊆ closedBall 0 B := closedConvexHull_min (by
+    rintro _ ⟨x, hx, rfl⟩
+    exact mem_closedBall_zero_iff.2 (hB x hx)) (convex_closedBall 0 B) isClosed_closedBall
+  exact mem_closedBall_zero_iff.1 (h hf)
+
+/-- **Lemma 6 (Set of the Stein witnesses)**, Stein witnesses. `φ*_ρ ∈ 𝒲` for every
+`ρ ∈ 𝒫(Ω)`. -/
+theorem witness_set_steinWitness_mem [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C)
+    [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω) : steinWitness Φ s ρ ∈ witnessSet Φ s Ω :=
+  -- A mean of points of a closed convex set stays in this set.
+  (convex_closedConvexHull).integral_mem isClosed_closedConvexHull
+    (hρ.mono fun _ hx ↦ subset_closedConvexHull (mem_image_of_mem _ hx))
+    (xi_regularity_integrable hS hρ)
+
+/-- **Lemma 7 (A consistent candidate gives a solution).** Suppose that the standing assumptions
+hold. Let `ρ₀ ∈ 𝒫(Ω)`, and let `m` be a candidate with values in `𝒲` such that `m = G_{ρ₀}(m)`.
+Then, the maps `T_t = T^m_t` solve the continuous-time SVGD equation. -/
+theorem consistent_candidate_isSolution (hS : StandingAssumptions Ω π p s Φ K C)
+    (hρ₀ : ∀ᵐ x ∂ρ₀, x ∈ Ω) {m : ℝ → 𝓗[d, H₀]} (hm : Continuous m)
+    (hm𝒲 : ∀ t, m t ∈ witnessSet Φ s Ω) (hcons : IsConsistent Φ s ρ₀ m) :
+    IsSolution Φ s Ω ρ₀ fun t x ↦ trajectory Φ m 0 x t := by
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  have hmB (t : ℝ) : ‖m t‖ ≤ B := witness_set_norm_le hB (hm𝒲 t)
+  have hK := hS.kernel
+  refine ⟨fun t _ ↦ continuous_trajectory_apply hm hmB hK.lipschitzWith 0 t,
+    funext (positions_zero hS hm hmB), fun t _ ↦ ae_map_trajectory_mem hm hmB hK.lipschitzWith
+      hS.measurableSet hK.eq_zero_of_mem_frontier hρ₀ 0 t, fun x t ht ↦ ?_⟩
+  -- As `m(t) = φ*_{ρ_t}`, the equation of Lemma 5 is the continuous-time SVGD equation.
+  rw [drift, ← fixedPointMap, ← hcons t ht]
+  exact (positions_hasDerivAt hS hm hmB x t).hasDerivWithinAt
+
+/-! ### A consistent candidate on a bounded time interval
+
+The modulus of continuity of the Stein feature on `Ω` is
+`ω(r) = sup {‖ξ_x - ξ_y‖_𝓗 | x, y ∈ Ω, ‖x - y‖ ≤ r}`, i.e.
+`modulusOfContinuityOn (steinFeature Φ s) Ω` (`CompactSVGD/Definitions.lean`). -/
+
+example (r : ℝ) : modulusOfContinuityOn (steinFeature Φ s) Ω r =
+    sSup {e | ∃ x ∈ Ω, ∃ y ∈ Ω, dist x y ≤ r ∧
+      dist (steinFeature Φ s x) (steinFeature Φ s y) = e} :=
+  rfl
+
+section Modulus
+
+variable (hS : StandingAssumptions Ω π p s Φ K C)
 include hS
 
-/-- The closed convex hull of `ξ(Ω)` is compact. -/
-private theorem isCompact_closedConvexHull_steinFeature :
-    IsCompact (closedConvexHull ℝ (steinFeature Φ s '' Ω)) :=
-  (hS.isCompact.image_of_continuousOn
-    (xi_regularity_uniformContinuousOn hS).continuousOn).closedConvexHull
+/-- The modulus of continuity `ω` of the Stein feature on `Ω` is nondecreasing. -/
+theorem monotone_modulus_steinFeature : Monotone (modulusOfContinuityOn (steinFeature Φ s) Ω) :=
+  monotone_modulusOfContinuityOn (isCompact_image_steinFeature hS).isBounded
 
-/-- For every `ν ∈ 𝒫(Ω)`, `φ*_ν` lies in the closed convex hull of `ξ(Ω)`. -/
-private theorem direction_mem_closedConvexHull [IsProbabilityMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω) :
-    direction Φ s ν ∈ closedConvexHull ℝ (steinFeature Φ s '' Ω) :=
-  (convex_closedConvexHull).integral_mem isClosed_closedConvexHull
-    (hν.mono fun _ hx ↦ subset_closedConvexHull (mem_image_of_mem _ hx))
-    (xi_regularity_integrable hS hν)
+/-- `ω(r)` tends to `0` as `r` tends to `0`, by (i) of Lemma 4. -/
+theorem tendsto_modulus_steinFeature :
+    Tendsto (modulusOfContinuityOn (steinFeature Φ s) Ω) (𝓝 0) (𝓝 0) :=
+  (xi_regularity_uniformContinuousOn hS).tendsto_modulusOfContinuityOn
 
-/-- The closed convex hull of `ξ(Ω)` is bounded. -/
-private theorem exists_norm_le_closedConvexHull_steinFeature :
-    ∃ B : ℝ≥0, ∀ h ∈ closedConvexHull ℝ (steinFeature Φ s '' Ω), ‖h‖ ≤ B := by
-  obtain ⟨B, hB⟩ := (isCompact_closedConvexHull_steinFeature hS).isBounded.exists_norm_le
-  exact ⟨B.toNNReal, fun h hh ↦ (hB h hh).trans (Real.le_coe_toNNReal B)⟩
+/-- `‖ξ_x - ξ_y‖_𝓗 ≤ ω(r)` for `x, y ∈ Ω` with `‖x - y‖ ≤ r`. -/
+theorem dist_steinFeature_le_modulus {x y : EuclideanSpace ℝ (Fin d)} (hx : x ∈ Ω) (hy : y ∈ Ω)
+    {r : ℝ} (hxy : dist x y ≤ r) :
+    dist (steinFeature Φ s x) (steinFeature Φ s y) ≤ modulusOfContinuityOn (steinFeature Φ s) Ω r :=
+  dist_le_modulusOfContinuityOn (isCompact_image_steinFeature hS).isBounded hx hy hxy
 
-/-- **Existence of a solution of the mean-field SVGD equation on a compact time interval.** Under
-the standing assumptions, for every `ν ∈ 𝒫(Ω)` and every `a ≤ b`, there is a continuous curve `m`
-with values in the closed convex hull of `ξ(Ω)` such that `m t = φ*_{(Xₜ)#ν}` for `t ∈ [a, b]`,
-where `Xₜ = trajectory Φ m a · t`. -/
-private theorem exists_meanField_Icc [IsProbabilityMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω) {a b : ℝ}
-    (hab : a ≤ b) :
-    ∃ m : ℝ → 𝓗[d, H₀], Continuous m ∧ (∀ t, m t ∈ closedConvexHull ℝ (steinFeature Φ s '' Ω)) ∧
-      ∀ t ∈ Icc a b, m t = direction Φ s (ν.map (trajectory Φ m a · t)) := by
-  have hΦ := hS.kernel
-  have hΩ := hS.isCompact
-  set 𝒦 := closedConvexHull ℝ (steinFeature Φ s '' Ω)
-  obtain ⟨B, hB⟩ := exists_norm_le_closedConvexHull_steinFeature hS
-  have h𝒦 : IsCompact 𝒦 := isCompact_closedConvexHull_steinFeature hS
+/-- **Witness estimate.** Let `ψ₁, ψ₂` move the particles of `ρ ∈ 𝒫(Ω)` into `Ω`, each by at most
+`r` from the other. Then, `‖φ*_{(ψ₁)#ρ} - φ*_{(ψ₂)#ρ}‖_𝓗 ≤ ω(r)`. -/
+theorem dist_steinWitness_map_le [IsProbabilityMeasure ρ]
+    {ψ₁ ψ₂ : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)} (h₁ : AEMeasurable ψ₁ ρ)
+    (h₂ : AEMeasurable ψ₂ ρ) (hψ₁ : ∀ᵐ x ∂ρ, ψ₁ x ∈ Ω) (hψ₂ : ∀ᵐ x ∂ρ, ψ₂ x ∈ Ω) {r : ℝ}
+    (hr : ∀ᵐ x ∂ρ, dist (ψ₁ x) (ψ₂ x) ≤ r) :
+    dist (steinWitness Φ s (ρ.map ψ₁)) (steinWitness Φ s (ρ.map ψ₂)) ≤
+      modulusOfContinuityOn (steinFeature Φ s) Ω r := by
+  have hΩm := hS.measurableSet
+  -- By the change of variables formula, `φ*_{ψ#ρ} = E_{x ∼ ρ}[ξ_{ψ(x)}]`.
+  have hmap {ψ : EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)} (hψ : AEMeasurable ψ ρ)
+      (hψΩ : ∀ᵐ x ∂ρ, ψ x ∈ Ω) :
+      Integrable (fun x ↦ steinFeature Φ s (ψ x)) ρ ∧
+        steinWitness Φ s (ρ.map ψ) = ∫ x, steinFeature Φ s (ψ x) ∂ρ := by
+    have hΩ' : ∀ᵐ y ∂ρ.map ψ, y ∈ Ω := (ae_map_iff hψ hΩm).2 hψΩ
+    have hm : AEStronglyMeasurable (steinFeature Φ s) (ρ.map ψ) := by
+      rw [← Measure.restrict_eq_self_of_ae_mem hΩ']
+      exact (xi_regularity_uniformContinuousOn hS).continuousOn.aestronglyMeasurable hΩm
+    exact ⟨(integrable_map_measure hm hψ).1 (xi_regularity_integrable hS hΩ'),
+      integral_map hψ hm⟩
+  obtain ⟨hi₁, he₁⟩ := hmap h₁ hψ₁
+  obtain ⟨hi₂, he₂⟩ := hmap h₂ hψ₂
+  -- The norm of a mean is at most the mean of the norms.
+  rw [he₁, he₂, dist_eq_norm, ← integral_sub hi₁ hi₂]
+  refine (norm_integral_le_of_norm_le_const
+    (C := modulusOfContinuityOn (steinFeature Φ s) Ω r) ?_).trans_eq (by simp)
+  filter_upwards [hψ₁, hψ₂, hr] with x hx₁ hx₂ hx
+  rw [← dist_eq_norm]
+  exact dist_steinFeature_le_modulus hS hx₁ hx₂ hx
+
+end Modulus
+
+/-- **Theorem 5 (Schauder).** Let `Γ` be a nonempty, compact and convex subset of a real normed
+space. Then, every continuous map from `Γ` to `Γ` has a fixed point. It is usually stated in
+a Banach space, but completeness is not needed. -/
+theorem schauder {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] {Γ : Set X}
+    (hΓ : IsCompact Γ) (hconv : Convex ℝ Γ) (hne : Γ.Nonempty) (G : C(Γ, Γ)) :
+    ∃ g, Function.IsFixedPt G g :=
+  TauCeti.schauderFixedPoint_compactConvex hΓ hconv hne G
+
+/-- **Lemma 8 (A consistent candidate on a bounded time interval).** Suppose that the standing
+assumptions hold. Let `ρ ∈ 𝒫(Ω)` and `a > 0`. Then, there is a continuous curve
+`g : [0, a] → 𝒲` such that `g(t) = φ*_{(T^g_t)#ρ}` for every `t ∈ [0, a]`, where `T^g_t` are the
+positions of Lemma 5 for the extension of `g` to `[0, ∞)` by the constant `g(a)`. -/
+theorem consistent_candidate_bounded_interval [CompleteSpace H₀]
+    (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω)
+    {a : ℝ} (ha : 0 < a) :
+    ∃ g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀], (∀ t, g t ∈ witnessSet Φ s Ω) ∧
+      ∀ t, g t = steinWitness Φ s (ρ.map (trajectory Φ (IccExtend ha.le ⇑g) 0 · t)) := by
   classical
-  have hΩne : Ω.Nonempty := hν.exists
-  -- The set `S` of bounded continuous curves on `[a, b]` with values in `𝒦`.
-  set S : Set (Icc a b →ᵇ 𝓗[d, H₀]) := {g | ∀ t, g t ∈ 𝒦}
-  -- Curves of `S`, extended to `ℝ`, satisfy the assumptions on trajectories.
-  have hext {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) :
-      Continuous (IccExtend hab ⇑g) ∧ ∀ τ, ‖IccExtend hab (⇑g) τ‖ ≤ B :=
-    ⟨g.continuous.Icc_extend', fun τ ↦ hB _ (hg _)⟩
-  have htraj {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (t : ℝ) :
-      Continuous (trajectory Φ (IccExtend hab ⇑g) a · t) ∧
-        MapsTo (trajectory Φ (IccExtend hab ⇑g) a · t) Ω Ω :=
-    ⟨continuous_trajectory_apply (hext hg).1 (hext hg).2 hΦ.lipschitzWith a t,
-      fun _ hx ↦ trajectory_mem (hext hg).1 (hext hg).2 hΦ.lipschitzWith
-        hΦ.eq_zero_of_mem_frontier hx t⟩
-  -- The fixed-point map, on raw functions.
-  let F (g : Icc a b →ᵇ 𝓗[d, H₀]) (t : Icc a b) : 𝓗[d, H₀] :=
-    direction Φ s (ν.map (trajectory Φ (IccExtend hab ⇑g) a · t))
-  have hFS {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (t : Icc a b) : F g t ∈ 𝒦 :=
-    direction_mem_closedConvexHull hS (ae_map_trajectory_mem (hext hg).1 (hext hg).2
-      hΦ.lipschitzWith hΩ.measurableSet hΦ.eq_zero_of_mem_frontier hν a t)
-  -- Uniform continuity of `ξ` on `Ω`.
-  have hξ := Metric.uniformContinuousOn_iff.1 (xi_regularity_uniformContinuousOn hS)
-  -- Equicontinuity of the images.
-  have hequi : ∀ ε > 0, ∃ δ > 0, ∀ g ∈ S, ∀ t t' : Icc a b, dist t t' < δ →
-      dist (F g t) (F g t') < ε := fun ε hε ↦ by
-    obtain ⟨δ, hδ, h⟩ := exists_dist_integral_map_trajectory_lt hΩ hΦ.lipschitzWith hΦ.norm_le
-      hΦ.eq_zero_of_mem_frontier (xi_regularity_uniformContinuousOn hS) hν B hε
-    exact ⟨δ, hδ, fun g hg t t' htt' ↦ h _ (hext hg).1 (hext hg).2 a t t' htt'⟩
-  have hFc {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) : Continuous (F g) :=
-    Metric.continuous_iff.2 fun t ε hε ↦ by
-      obtain ⟨δ, hδ, hδF⟩ := hequi ε hε
-      exact ⟨δ, hδ, fun t' ht' ↦ hδF g hg t' t ht'⟩
-  -- The fixed-point map on bounded continuous curves.
-  let G (g : Icc a b →ᵇ 𝓗[d, H₀]) : Icc a b →ᵇ 𝓗[d, H₀] :=
-    if hg : g ∈ S then BoundedContinuousFunction.mkOfCompact ⟨F g, hFc hg⟩ else g
-  have hG {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (t : Icc a b) : G g t = F g t := by
+  set 𝒲 := witnessSet Φ s Ω
+  set ω := modulusOfContinuityOn (steinFeature Φ s) Ω
+  have hK := hS.kernel
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  have h𝒲 : IsCompact 𝒲 := witness_set_isCompact hS
+  have hω₀ (r : ℝ) : 0 ≤ ω r := modulusOfContinuityOn_nonneg _ _ r
+  have hωlim (c : ℝ) : Tendsto (fun r ↦ ω (c * r)) (𝓝 0) (𝓝 0) :=
+    (xi_regularity_uniformContinuousOn hS).tendsto_modulusOfContinuityOn_comp_mul_left c
+  -- A curve `g` with values in `𝒲` is extended by `g(a)`: the extension is a candidate bounded by
+  -- `B`, and `T^g_t` are its positions.
+  have hext {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) :
+      Continuous (IccExtend ha.le ⇑g) ∧ ∀ τ, ‖IccExtend ha.le (⇑g) τ‖ ≤ B :=
+    ⟨g.continuous.Icc_extend', fun _ ↦ witness_set_norm_le hB (hg _)⟩
+  have hpos {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) (t : ℝ) :
+      AEMeasurable (trajectory Φ (IccExtend ha.le ⇑g) 0 · t) ρ ∧
+        ∀ᵐ x ∂ρ, trajectory Φ (IccExtend ha.le ⇑g) 0 x t ∈ Ω :=
+    ⟨(continuous_trajectory_apply (hext hg).1 (hext hg).2 hK.lipschitzWith 0 t).aemeasurable,
+      hρ.mono fun _ hx ↦ trajectory_mem (hext hg).1 (hext hg).2 hK.lipschitzWith
+        hK.eq_zero_of_mem_frontier hx t⟩
+  -- The map `G g(t) = φ*_{(T^g_t)#ρ}`, on raw curves.
+  let F (g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]) (t : Icc (0 : ℝ) a) : 𝓗[d, H₀] :=
+    steinWitness Φ s (ρ.map (trajectory Φ (IccExtend ha.le ⇑g) 0 · t))
+  have hF𝒲 {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) (t : Icc (0 : ℝ) a) :
+      F g t ∈ 𝒲 := by
+    exact witness_set_steinWitness_mem hS ((ae_map_iff (hpos hg t).1
+      hS.measurableSet).2 (hpos hg t).2)
+  -- The particles move at speed at most `B C` (Lemma 5 (ii)), so that, by the witness estimate, the
+  -- Stein witness changes by at most `ω(B C |t - t'|)` between the times `t` and `t'`.
+  have hFpace {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) (t t' : Icc (0 : ℝ) a) :
+      dist (F g t) (F g t') ≤ ω (B * C * dist t t') :=
+    dist_steinWitness_map_le hS (hpos hg t).1 (hpos hg t').1 (hpos hg t).2 (hpos hg t').2
+      (.of_forall fun x ↦ (positions_dist_le hS (hext hg).1 (hext hg).2 x t t').trans_eq
+        (by rw [Subtype.dist_eq, Real.dist_eq]))
+  have hFc {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) : Continuous (F g) :=
+    (Metric.uniformContinuous_of_continuity_modulus _ (hωlim (B * C)) (F g)
+      (hFpace hg)).continuous
+  -- The map `G` on bounded continuous curves.
+  let G (g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]) : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀] :=
+    if hg : ∀ t, g t ∈ 𝒲 then BoundedContinuousFunction.mkOfCompact ⟨F g, hFc hg⟩ else g
+  have hG {g : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) (t : Icc (0 : ℝ) a) :
+      G g t = F g t := by
     simp [G, hg]
-  have hGS : MapsTo G S S := fun g hg t ↦ by
-    rw [hG hg]
-    exact hFS hg t
-  -- Continuity of the fixed-point map on `S`.
-  have hGc : ContinuousOn G S := by
-    refine Metric.continuousOn_iff.2 fun g hg ε hε ↦ ?_
-    obtain ⟨η, hη, hηξ⟩ := hξ (ε / 2) (half_pos hε)
-    have hgr : Tendsto (fun δ ↦ gronwallBound 0 (B * K) (C * δ) (b - a)) (𝓝 0) (𝓝 0) := by
-      have := ((gronwallBound_continuous_ε 0 (B * K) (b - a)).comp
-        (continuous_const_mul (C : ℝ))).tendsto 0
-      simpa [gronwallBound_ε0, Function.comp_def] using this
-    obtain ⟨δ, hδ, hδgr⟩ := Metric.tendsto_nhds_nhds.1 hgr η hη
-    refine ⟨δ, hδ, fun g' hg' hgg' ↦ ?_⟩
-    refine ((BoundedContinuousFunction.dist_le (half_pos hε).le).2 fun t ↦ ?_).trans_lt
-      (half_lt_self hε)
-    rw [hG hg', hG hg]
-    refine MeasureTheory.dist_integral_map_le hΩ (xi_regularity_uniformContinuousOn hS).continuousOn
-      hν (htraj hg' t).1 (htraj hg t).1 (htraj hg' t).2 (htraj hg t).2
-      (fun x hx y hy hxy ↦ (hηξ x hx y hy hxy).le) fun x _ ↦ ?_
-    calc dist (trajectory Φ (IccExtend hab ⇑g') a x t) (trajectory Φ (IccExtend hab ⇑g) a x t)
-      _ ≤ gronwallBound 0 (B * K) (C * dist g' g) (t - a) :=
-          dist_trajectory_trajectory_le_of_dist_le (hext hg').1 (hext hg').2 hΦ.lipschitzWith
-            hΦ.norm_le (hext hg).1 (hext hg).2 t.property.1
-            (fun τ _ ↦ BoundedContinuousFunction.dist_coe_le_dist (f := g') (g := g) _) x
-      _ ≤ gronwallBound 0 (B * K) (C * dist g' g) (b - a) :=
-          gronwallBound_mono le_rfl (by positivity) (by positivity) (by linarith [t.property.2])
-      _ < η := (le_abs_self _).trans_lt (by
-          simpa [Real.dist_eq] using
-            hδgr (by simpa [Real.dist_eq, abs_of_nonneg dist_nonneg] using hgg'))
-  -- `F g τ` only depends on `g` before `τ`, and `F g a = φ*_ν`.
-  have hcaus {g g' : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) (hg' : g' ∈ S) {τ : Icc a b}
-      (hgg' : ∀ t : Icc a b, t ≤ τ → g t = g' t) : F g τ = F g' τ := by
-    have heq : EqOn (IccExtend hab ⇑g) (IccExtend hab ⇑g') (uIcc a τ) := fun t ht ↦ by
-      rw [uIcc_of_le τ.property.1] at ht
-      have htab : t ∈ Icc a b := ⟨ht.1, ht.2.trans τ.property.2⟩
-      rw [IccExtend_of_mem hab _ htab, IccExtend_of_mem hab _ htab]
-      exact hgg' ⟨t, htab⟩ (Subtype.coe_le_coe.1 ht.2)
-    have htraj : (fun x ↦ trajectory Φ (IccExtend hab ⇑g) a x τ) =
-        fun x ↦ trajectory Φ (IccExtend hab ⇑g') a x τ := funext fun x ↦
-      trajectory_eq_of_eqOn (hext hg).1 (hext hg).2 hΦ.lipschitzWith (hext hg').1 (hext hg').2
-        heq x
-    exact congrArg (fun f ↦ direction Φ s (ν.map f)) htraj
-  have hF₀ {g : Icc a b →ᵇ 𝓗[d, H₀]} (hg : g ∈ S) :
-      F g ⟨a, left_mem_Icc.2 hab⟩ = direction Φ s ν := by
-    have htraj : (fun x ↦ trajectory Φ (IccExtend hab ⇑g) a x a) = id :=
-      funext fun x ↦ trajectory_self (hext hg).1 (hext hg).2 hΦ.lipschitzWith a x
-    exact (congrArg (fun f ↦ direction Φ s (ν.map f)) htraj).trans (by rw [Measure.map_id])
-  -- Tonelli's argument gives a fixed point of `G`.
-  obtain ⟨g, hg, hgG⟩ := BoundedContinuousFunction.exists_isFixedPt_of_causal hab h𝒦
-    ((hΩne.image _).mono subset_closedConvexHull) hGS hGc
-    (Metric.uniformEquicontinuous_iff.2 fun ε hε ↦ (hequi ε hε).imp fun _ ⟨hδ, h⟩ ↦
-      ⟨hδ, fun t t' htt' g ↦ by
-        simpa only [hG g.property] using h g g.property t t' htt'⟩).equicontinuous
-    (fun g g' hg hg' τ hgg' ↦ by rw [hG hg, hG hg']; exact hcaus hg hg' hgg')
-    (fun g g' hg hg' ↦ by rw [hG hg, hG hg', hF₀ hg, hF₀ hg'])
-  refine ⟨IccExtend hab ⇑g, (hext hg).1, fun τ ↦ hg _, fun t ht ↦ ?_⟩
-  rw [IccExtend_of_mem hab _ ht]
-  exact (DFunLike.congr_fun hgG _).symm.trans (hG hg ⟨t, ht⟩)
+  -- A convex and compact set `Γ` of curves: those with values in `𝒲` that vary at the pace of the
+  -- Stein witnesses.
+  let Γ : Set (Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]) :=
+    {g | (∀ t, g t ∈ 𝒲) ∧ ∀ t t', dist (g t) (g t') ≤ ω (B * C * dist t t')}
+  have hΓne : Γ.Nonempty := by
+    obtain ⟨x, hx⟩ := hρ.exists
+    refine ⟨BoundedContinuousFunction.const _ (steinFeature Φ s x),
+      fun _ ↦ subset_closedConvexHull (mem_image_of_mem _ hx), fun t t' ↦ ?_⟩
+    simpa using hω₀ _
+  have hΓconv : Convex ℝ Γ := by
+    intro g₁ hg₁ g₂ hg₂ θ₁ θ₂ hθ₁ hθ₂ hθ
+    refine ⟨fun t ↦ convex_closedConvexHull (hg₁.1 t) (hg₂.1 t) hθ₁ hθ₂ hθ, fun t t' ↦ ?_⟩
+    simp only [add_apply, smul_apply, dist_eq_norm]
+    calc ‖θ₁ • g₁ t + θ₂ • g₂ t - (θ₁ • g₁ t' + θ₂ • g₂ t')‖
+        = ‖θ₁ • (g₁ t - g₁ t') + θ₂ • (g₂ t - g₂ t')‖ := by
+          congr 1
+          simp only [smul_sub]
+          abel
+      _ ≤ θ₁ * ‖g₁ t - g₁ t'‖ + θ₂ * ‖g₂ t - g₂ t'‖ := (norm_add_le _ _).trans (by
+          rw [norm_smul, norm_smul, Real.norm_of_nonneg hθ₁, Real.norm_of_nonneg hθ₂])
+      _ ≤ θ₁ * ω (B * C * dist t t') + θ₂ * ω (B * C * dist t t') := by
+          rw [← dist_eq_norm, ← dist_eq_norm]
+          gcongr
+          exacts [hg₁.2 t t', hg₂.2 t t']
+      _ = ω (B * C * dist t t') := by rw [← add_mul, hθ, one_mul]
+  have hΓc : IsClosed Γ := by
+    simp only [Γ, ofPred_and, ofPred_forall]
+    exact (isClosed_iInter fun t ↦ h𝒲.isClosed.preimage
+      (continuous_eval_const t)).inter
+        (isClosed_iInter fun t ↦ isClosed_iInter fun t' ↦ isClosed_le
+          ((continuous_eval_const t).dist
+            (continuous_eval_const t')) continuous_const)
+  -- By the Arzelà–Ascoli theorem, `Γ` is compact: its curves take their values in the compact set
+  -- `𝒲` and are equicontinuous, as `ω(r)` tends to `0` as `r` tends to `0`.
+  have hΓK : IsCompact Γ :=
+    BoundedContinuousFunction.arzela_ascoli₂ 𝒲 h𝒲 Γ hΓc (fun g t hg ↦ hg.1 t)
+      (Metric.equicontinuous_of_continuity_modulus _ (hωlim (B * C))
+        ((↑) : Γ → Icc (0 : ℝ) a → 𝓗[d, H₀]) fun t t' g ↦ g.property.2 t t')
+  -- The map `G` sends `Γ` into `Γ`.
+  have hGΓ : MapsTo G Γ Γ := fun g hg ↦
+    ⟨fun t ↦ (hG hg.1 t).symm ▸ hF𝒲 hg.1 t, fun t t' ↦ by
+      rw [hG hg.1, hG hg.1]
+      exact hFpace hg.1 t t'⟩
+  -- Two close curves give close positions (Lemma 5 (iii)), and close positions give close Stein
+  -- witnesses (the witness estimate).
+  set c := a * C * Real.exp (B * K * a)
+  have hGcont {g g' : Icc (0 : ℝ) a →ᵇ 𝓗[d, H₀]} (hg : ∀ t, g t ∈ 𝒲) (hg' : ∀ t, g' t ∈ 𝒲) :
+      dist (G g) (G g') ≤ ω (c * dist g g') := by
+    refine (BoundedContinuousFunction.dist_le (hω₀ _)).2 fun t ↦ ?_
+    rw [hG hg, hG hg']
+    refine dist_steinWitness_map_le hS (hpos hg t).1 (hpos hg' t).1 (hpos hg t).2 (hpos hg' t).2
+      (.of_forall fun x ↦ ?_)
+    have hpt := positions_dist_le_of_dist_le hS (hext hg).1 (hext hg).2 (hext hg').1 (hext hg').2
+      (Δ := dist g g') t.property.1 (fun r hr ↦ ?_) x
+    · refine hpt.trans ?_
+      have ht : (t : ℝ) ≤ a := t.property.2
+      have hBK : (0 : ℝ) ≤ B * K := by positivity
+      calc (C : ℝ) * (t : ℝ) * Real.exp (B * K * (t : ℝ)) * dist g g'
+          ≤ C * a * Real.exp (B * K * a) * dist g g' := by gcongr
+        _ = c * dist g g' := by ring
+    · have hra : r ∈ Icc (0 : ℝ) a := ⟨hr.1, hr.2.trans t.property.2⟩
+      rw [IccExtend_of_mem ha.le _ hra, IccExtend_of_mem ha.le _ hra]
+      exact BoundedContinuousFunction.dist_coe_le_dist _
+  -- The map `G` is continuous on `Γ`, as `ω(r)` tends to `0` as `r` tends to `0`.
+  have hGc : ContinuousOn G Γ := by
+    rw [continuousOn_iff_continuous_domRestrict]
+    exact (Metric.uniformContinuous_of_continuity_modulus _ (hωlim c) (Γ.domRestrict G)
+      fun g g' ↦ hGcont g.property.1 g'.property.1).continuous
+  -- By Theorem 5, `G` has a fixed point in `Γ`.
+  obtain ⟨⟨g, hgΓ⟩, hfix⟩ := schauder hΓK hΓconv hΓne ⟨hGΓ.restrict G Γ Γ, hGc.mapsToRestrict hGΓ⟩
+  have hGg : G g = g := congrArg Subtype.val hfix
+  exact ⟨g, hgΓ.1, fun t ↦ (DFunLike.congr_fun hGg t).symm.trans (hG hgΓ.1 t)⟩
 
-/-- **Existence of a solution of the mean-field SVGD equation on `[0, ∞)`.** Under the standing
-assumptions, for every `μ ∈ 𝒫(Ω)`, there is a continuous curve `m` with values in the closed
-convex hull of `ξ(Ω)` such that `m t = φ*_{(T_t)#μ}` for every `t ≥ 0`, where
-`T_t = trajectory Φ m 0 · t`. -/
-theorem exists_meanField [IsProbabilityMeasure μ] (hμ : ∀ᵐ x ∂μ, x ∈ Ω) :
-    ∃ m : ℝ → 𝓗[d, H₀], Continuous m ∧ (∀ t, m t ∈ closedConvexHull ℝ (steinFeature Φ s '' Ω)) ∧
-      IsMeanFieldCurve Φ s μ m := by
-  set 𝒦 := closedConvexHull ℝ (steinFeature Φ s '' Ω)
-  have hΦ := hS.kernel
-  have hΩ := hS.isCompact
-  obtain ⟨B, hB⟩ := exists_norm_le_closedConvexHull_steinFeature hS
-  -- A solution on `[n, n + 1]` from any probability measure concentrated on `Ω`.
-  have hstep (n : ℕ) (ν : Measure (EuclideanSpace ℝ (Fin d))) :
-      ∃ m : ℝ → 𝓗[d, H₀], IsProbabilityMeasure ν →
-      (∀ᵐ x ∂ν, x ∈ Ω) → Continuous m ∧ (∀ t, m t ∈ 𝒦) ∧
-        ∀ t ∈ Icc (n : ℝ) (n + 1), m t = direction Φ s (ν.map (trajectory Φ m n · t)) := by
+/-! ### From a bounded time interval to all times -/
+
+/-- **Theorem 4 (Existence of the continuous-time dynamics).** Suppose that the standing
+assumptions hold, and let `ρ₀ ∈ 𝒫(Ω)`. Then, there is a family `(T_t)_{t ≥ 0}` of maps from `ℝᵈ` to
+`ℝᵈ` that solves the continuous-time SVGD equation. -/
+theorem exists_continuous_time_dynamics [CompleteSpace H₀]
+    (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ₀] (hρ₀ : ∀ᵐ x ∂ρ₀, x ∈ Ω) :
+    ∃ T : ℝ → EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d), IsSolution Φ s Ω ρ₀ T := by
+  set 𝒲 := witnessSet Φ s Ω
+  have hK := hS.kernel
+  have h01 : (0 : ℝ) ≤ 1 := zero_le_one
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  -- Lemma 8 with `a = 1`, from every distribution of `𝒫(Ω)`.
+  have hstep (ν : Measure (EuclideanSpace ℝ (Fin d))) :
+      ∃ g : Icc (0 : ℝ) 1 →ᵇ 𝓗[d, H₀], IsProbabilityMeasure ν → (∀ᵐ x ∂ν, x ∈ Ω) →
+        (∀ t, g t ∈ 𝒲) ∧
+          ∀ t, g t = steinWitness Φ s (ν.map (trajectory Φ (IccExtend h01 ⇑g) 0 · t)) := by
     by_cases h : IsProbabilityMeasure ν ∧ ∀ᵐ x ∂ν, x ∈ Ω
     · have := h.1
-      obtain ⟨m, hm⟩ := exists_meanField_Icc hS h.2 (show (n : ℝ) ≤ n + 1 by linarith)
-      exact ⟨m, fun _ _ ↦ hm⟩
+      obtain ⟨g, hg⟩ := consistent_candidate_bounded_interval hS h.2 one_pos
+      exact ⟨g, fun _ _ ↦ hg⟩
     · exact ⟨0, fun h₁ h₂ ↦ absurd ⟨h₁, h₂⟩ h⟩
   choose step hstep using hstep
-  -- The measures `νₙ` reached at the integer times, and the curves `mₙ` on `[n, n + 1]`.
-  let ν : ℕ → Measure (EuclideanSpace ℝ (Fin d)) := fun n ↦ Nat.rec μ (fun k νk ↦
-    νk.map (trajectory Φ (step k νk) k · (k + 1))) n
-  have hν₀ : ν 0 = μ := rfl
-  have hνsucc (n : ℕ) : ν (n + 1) = (ν n).map (trajectory Φ (step n (ν n)) n · (n + 1)) := rfl
-  let mₙ (n : ℕ) : ℝ → 𝓗[d, H₀] := step n (ν n)
-  have hP (n : ℕ) : IsProbabilityMeasure (ν n) ∧ ∀ᵐ x ∂ν n, x ∈ Ω := by
+  -- The distributions `ρₙ` at the integer times, and the pieces `gₙ` of the candidate.
+  let ρn : ℕ → Measure (EuclideanSpace ℝ (Fin d)) := fun n ↦ Nat.rec ρ₀
+    (fun _ ρk ↦ ρk.map (trajectory Φ (IccExtend h01 ⇑(step ρk)) 0 · 1)) n
+  have hρsucc (n : ℕ) :
+      ρn (n + 1) = (ρn n).map (trajectory Φ (IccExtend h01 ⇑(step (ρn n))) 0 · 1) :=
+    rfl
+  let g (n : ℕ) : ℝ → 𝓗[d, H₀] := IccExtend h01 ⇑(step (ρn n))
+  have hgc (n : ℕ) : Continuous (g n) := (step (ρn n)).continuous.Icc_extend'
+  have hP (n : ℕ) : IsProbabilityMeasure (ρn n) ∧ ∀ᵐ x ∂ρn n, x ∈ Ω := by
     induction n with
-    | zero => exact ⟨hν₀ ▸ inferInstance, hμ⟩
+    | zero => exact ⟨inferInstanceAs (IsProbabilityMeasure ρ₀), hρ₀⟩
     | succ n ih =>
       have := ih.1
-      obtain ⟨hc, hK, -⟩ := hstep n (ν n) ih.1 ih.2
-      have hB' : ∀ t, ‖step n (ν n) t‖ ≤ B := fun t ↦ hB _ (hK t)
-      rw [hνsucc]
-      exact ⟨by infer_instance, ae_map_trajectory_mem hc hB' hΦ.lipschitzWith hΩ.measurableSet
-        hΦ.eq_zero_of_mem_frontier ih.2 n (n + 1)⟩
-  have hm (n : ℕ) := hstep n (ν n) (hP n).1 (hP n).2
-  have hmB (n : ℕ) (t : ℝ) : ‖mₙ n t‖ ≤ B := hB _ ((hm n).2.1 t)
-  -- The concatenated curve.
-  let M : ℝ → 𝓗[d, H₀] := fun t ↦ mₙ ⌊t⌋₊ t
-  have hM (n : ℕ) : EqOn M (mₙ n) (Icc n (n + 1)) := by
+      have hgB (t : ℝ) : ‖g n t‖ ≤ B := witness_set_norm_le hB ((hstep _ ih.1 ih.2).1 _)
+      refine ⟨by rw [hρsucc]; infer_instance, ?_⟩
+      rw [hρsucc]
+      exact ae_map_trajectory_mem (hgc n) hgB hK.lipschitzWith hS.measurableSet
+        hK.eq_zero_of_mem_frontier ih.2 0 1
+  have hg𝒲 (n : ℕ) (t : ℝ) : g n t ∈ 𝒲 := (hstep _ (hP n).1 (hP n).2).1 _
+  have hgB (n : ℕ) (t : ℝ) : ‖g n t‖ ≤ B := witness_set_norm_le hB (hg𝒲 n t)
+  have hgfix (n : ℕ) {r : ℝ} (hr : r ∈ Icc (0 : ℝ) 1) :
+      g n r = steinWitness Φ s ((ρn n).map (trajectory Φ (g n) 0 · r)) := by
+    have := (hstep _ (hP n).1 (hP n).2).2 ⟨r, hr⟩
+    change IccExtend h01 ⇑(step (ρn n)) r = _
+    rw [IccExtend_of_mem h01 (⇑(step (ρn n))) hr]
+    exact this
+  -- The pieces agree at the integer times: `gₙ(1) = φ*_{ρₙ₊₁} = gₙ₊₁(0)`.
+  have hjoin (n : ℕ) : g n 1 = g (n + 1) 0 := by
+    rw [hgfix n ⟨zero_le_one, le_rfl⟩, hgfix (n + 1) ⟨le_rfl, zero_le_one⟩, ← hρsucc]
+    have hid : (trajectory Φ (g (n + 1)) 0 · 0) = id :=
+      funext (positions_zero hS (hgc (n + 1)) (hgB (n + 1)))
+    rw [hid, Measure.map_id]
+  -- The glued candidate `m(t) = gₙ(t - n)` for `t ∈ [n, n + 1]`.
+  let m : ℝ → 𝓗[d, H₀] := fun t ↦ g ⌊t⌋₊ (t - ⌊t⌋₊)
+  have hm (n : ℕ) : EqOn m (fun t ↦ g n (t - n)) (Icc n (n + 1)) := by
     intro t ht
     rcases ht.2.lt_or_eq with hlt | heq
     · have : ⌊t⌋₊ = n := (Nat.floor_eq_iff ((Nat.cast_nonneg n).trans ht.1)).2 ⟨ht.1, hlt⟩
-      simp only [M, this]
-    · -- At `t = n + 1`, both curves are the update direction of `νₙ₊₁`.
-      have hfl : ⌊t⌋₊ = n + 1 := by rw [heq]; exact_mod_cast Nat.floor_natCast (n + 1)
-      have h₁ := (hm (n + 1)).2.2 t
-        ⟨by rw [heq]; push_cast; linarith, by rw [heq]; push_cast; linarith⟩
-      have h₂ := (hm n).2.2 t ⟨ht.1, ht.2⟩
-      simp only [M, hfl]
-      change step (n + 1) (ν (n + 1)) t = step n (ν n) t
-      have hid : (fun x ↦ trajectory Φ (step (n + 1) (ν (n + 1))) ((n + 1 : ℕ) : ℝ) x t) = id := by
-        funext x
-        rw [heq, ← Nat.cast_succ]
-        exact trajectory_self (hm (n + 1)).1 (hmB (n + 1)) hΦ.lipschitzWith _ x
-      rw [h₁, h₂, hid, Measure.map_id, hνsucc, heq]
-  have hM₀ : EqOn M (mₙ 0) (Iic 1) := by
+      simp only [m, this]
+    · have hfl : ⌊(n : ℝ) + 1⌋₊ = n + 1 := by exact_mod_cast Nat.floor_natCast (n + 1)
+      subst heq
+      simp only [m, hfl]
+      push_cast
+      rw [sub_self, add_sub_cancel_left]
+      exact (hjoin n).symm
+  have hm₀ : EqOn m (fun t ↦ g 0 (t - (0 : ℕ))) (Iic 1) := by
     intro t ht
     rcases ht.lt_or_eq with hlt | heq
-    · simp only [M, Nat.floor_eq_zero.2 hlt]
-    · exact hM 0 ⟨by simp [heq], by simp [heq]⟩
-  have hMc : Continuous M := continuous_of_eqOn_Icc_nat (fun n ↦ (hm n).1) hM₀ hM
-  have hMK (t : ℝ) : M t ∈ 𝒦 := (hm ⌊t⌋₊).2.1 t
-  have hMB (t : ℝ) : ‖M t‖ ≤ B := hB _ (hMK t)
-  -- On `[n, n + 1]`, `μₜ` is the image of `μₙ` by the flow of `mₙ` from time `n`.
-  have hmap (n : ℕ) {t : ℝ} (ht : t ∈ Icc (n : ℝ) (n + 1)) :
-      μ.map (trajectory Φ M 0 · t) =
-        (μ.map (trajectory Φ M 0 · n)).map (trajectory Φ (mₙ n) n · t) := by
-    rw [Measure.map_map
-      (continuous_trajectory_apply (hm n).1 (hmB n) hΦ.lipschitzWith n t).measurable
-      (continuous_trajectory_apply hMc hMB hΦ.lipschitzWith 0 n).measurable]
-    refine congrArg μ.map (funext fun x ↦ ?_)
-    exact (congrFun (trajectory_trajectory hMc hMB hΦ.lipschitzWith 0 n x) t).symm.trans
-      (trajectory_eq_of_eqOn hMc hMB hΦ.lipschitzWith (hm n).1 (hmB n)
-        ((hM n).mono (uIcc_of_le ht.1 ▸ Icc_subset_Icc_right ht.2)) _)
-  -- The image of `μ` at the integer times is `νₙ`.
-  have hTν (n : ℕ) : μ.map (trajectory Φ M 0 · n) = ν n := by
+    · simp only [m, Nat.floor_eq_zero.2 hlt]
+    · exact hm 0 ⟨by simp [heq], by simp [heq]⟩
+  have hmc : Continuous m :=
+    continuous_of_eqOn_Icc_nat (fun n ↦ (hgc n).comp (continuous_sub_right _)) hm₀ hm
+  have hm𝒲 (t : ℝ) : m t ∈ 𝒲 := hg𝒲 _ _
+  have hmB (t : ℝ) : ‖m t‖ ≤ B := witness_set_norm_le hB (hm𝒲 t)
+  -- Between the times `n` and `n + 1`, the particles follow the velocity field of `gₙ`:
+  -- `T^m_t = T^{gₙ}_{t - n} ∘ T^m_n`.
+  have hflow (n : ℕ) {t : ℝ} (ht : t ∈ Icc (n : ℝ) (n + 1)) (x : EuclideanSpace ℝ (Fin d)) :
+      trajectory Φ m 0 x t = trajectory Φ (g n) 0 (trajectory Φ m 0 x n) (t - n) := by
+    have hmn : Continuous fun r ↦ m (r + n) := hmc.comp (continuous_id.add continuous_const)
+    calc trajectory Φ m 0 x t = trajectory Φ m n (trajectory Φ m 0 x n) t :=
+          (congrFun (trajectory_trajectory hmc hmB hK.lipschitzWith 0 n x) t).symm
+      _ = trajectory Φ (fun r ↦ m (r + n)) 0 (trajectory Φ m 0 x n) (t - n) := by
+          rw [trajectory_comp_add hmc hmB hK.lipschitzWith, sub_add_cancel]
+      _ = trajectory Φ (g n) 0 (trajectory Φ m 0 x n) (t - n) := by
+          refine trajectory_eq_of_eqOn hmn (fun r ↦ hmB _) hK.lipschitzWith (hgc n) (hgB n)
+            (fun r hr ↦ ?_) _
+          rw [uIcc_of_le (by linarith [ht.1])] at hr
+          have hmem : r + n ∈ Icc (n : ℝ) (n + 1) := ⟨by linarith [hr.1], by linarith [hr.2, ht.2]⟩
+          simpa using hm n hmem
+  -- By induction, `(T^m_n)#ρ₀ = ρₙ`.
+  have hρ (n : ℕ) : ρ₀.map (trajectory Φ m 0 · n) = ρn n := by
     induction n with
     | zero =>
-      simp only [Nat.cast_zero, trajectory_self hMc hMB hΦ.lipschitzWith]
-      exact Measure.map_id
-    | succ n ih => rw [Nat.cast_succ, hmap n ⟨by linarith, le_rfl⟩, ih, hνsucc]
-  refine ⟨M, hMc, hMK, fun t ht ↦ ?_⟩
+      have hid : (trajectory Φ m 0 · ((0 : ℕ) : ℝ)) = id := funext fun x ↦ by
+        rw [Nat.cast_zero]
+        exact positions_zero hS hmc hmB x
+      simp only [hid, Measure.map_id, ρn, Nat.rec_zero]
+    | succ n ih =>
+      have heq : (trajectory Φ m 0 · ((n + 1 : ℕ) : ℝ)) =
+          (trajectory Φ (g n) 0 · 1) ∘ (trajectory Φ m 0 · (n : ℝ)) := funext fun x ↦ by
+        rw [Function.comp_apply, hflow n ⟨by push_cast; linarith, by push_cast; linarith⟩ x]
+        push_cast
+        ring_nf
+      rw [heq, ← Measure.map_map
+        (continuous_trajectory_apply (hgc n) (hgB n) hK.lipschitzWith 0 1).measurable
+        (continuous_trajectory_apply hmc hmB hK.lipschitzWith 0 n).measurable, ih, hρsucc]
+  -- The candidate `m` is consistent, and Lemma 7 concludes.
+  refine ⟨_, consistent_candidate_isSolution hS hρ₀ hmc hm𝒲 fun t ht ↦ ?_⟩
   set n := ⌊t⌋₊
   have htn : t ∈ Icc (n : ℝ) (n + 1) := ⟨Nat.floor_le ht, (Nat.lt_floor_add_one t).le⟩
-  rw [hM n htn]
-  change step n (ν n) t = _
-  rw [(hm n).2.2 t htn, hmap n htn, hTν]
+  calc m t = g n (t - n) := hm n htn
+    _ = steinWitness Φ s ((ρn n).map (trajectory Φ (g n) 0 · (t - n))) :=
+        hgfix n ⟨by linarith [htn.1], by linarith [htn.2]⟩
+    _ = fixedPointMap Φ s ρ₀ m t := by
+        rw [fixedPointMap, ← hρ n, Measure.map_map
+          (continuous_trajectory_apply (hgc n) (hgB n) hK.lipschitzWith 0 (t - n)).measurable
+          (continuous_trajectory_apply hmc hmB hK.lipschitzWith 0 n).measurable]
+        exact congrArg (fun T ↦ steinWitness Φ s (ρ₀.map T)) (funext fun x ↦ (hflow n htn x).symm)
 
-variable [IsProbabilityMeasure μ] (hμ : ∀ᵐ x ∂μ, x ∈ Ω)
-include hμ
+/-! ### Properties of the solutions -/
 
-/-- **The mean-field SVGD curve solves the mean-field equation.** Under the standing assumptions,
-for `μ ∈ 𝒫(Ω)`, `m t = φ*_{μ_t}` for every `t ≥ 0`, where `m = SVGD.meanFieldCurve Φ s μ` and
-`μ_t = (T_t)#μ` along the flow `T_t = SVGD.meanFieldFlow Φ s μ t`. -/
-theorem meanFieldCurve_eq_direction {t : ℝ} (ht : 0 ≤ t) :
-    meanFieldCurve Φ s μ t = direction Φ s (μ.map (meanFieldFlow Φ s μ t)) := by
-  have h : ∃ m : ℝ → 𝓗[d, H₀], Continuous m ∧ (∃ B : ℝ≥0, ∀ t, ‖m t‖ ≤ B) ∧
-      IsMeanFieldCurve Φ s μ m := by
-    obtain ⟨m, hmc, hmK, hm⟩ := exists_meanField hS hμ
-    obtain ⟨B, hB⟩ := exists_norm_le_closedConvexHull_steinFeature hS
-    exact ⟨m, hmc, ⟨B, fun t ↦ hB _ (hmK t)⟩, hm⟩
-  have hc : meanFieldCurve Φ s μ = h.choose := by rw [meanFieldCurve, dite_eq_left h]
-  have := h.choose_spec.2.2 t ht
-  rw [← hc] at this
-  exact this
+/-- The curve `m(t) = φ*_{ρ_t}` of the Stein witnesses of a family `(T_t)_{t ≥ 0}`, where
+`ρ_t = (T_t)#ρ₀` (Lemma 9). It is extended to negative times by `m(0)`. -/
+def witnessCurve (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (ρ₀ : Measure (EuclideanSpace ℝ (Fin d)))
+    (T : ℝ → EuclideanSpace ℝ (Fin d) → EuclideanSpace ℝ (Fin d)) (t : ℝ) : 𝓗[d, H₀] :=
+  steinWitness Φ s (ρ₀.map (T (max t 0)))
 
-/-- **The mean-field SVGD equation.** The particles follow the update direction of their law:
-`∂ₜ T_t(x) = φ*_{μ_t}(T_t(x))` for `t ≥ 0`, where `μ_t = (T_t)#μ`. -/
-theorem hasDerivAt_meanFieldFlow (x : EuclideanSpace ℝ (Fin d)) {t : ℝ} (ht : 0 ≤ t) :
-    HasDerivAt (meanFieldFlow Φ s μ · x)
-      (toVectorField Φ (direction Φ s (μ.map (meanFieldFlow Φ s μ t))) (meanFieldFlow Φ s μ t x))
-      t := by
-  obtain ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  rw [← meanFieldCurve_eq_direction hS hμ ht]
-  exact hasDerivAt_trajectory continuous_meanFieldCurve hmB hS.kernel.lipschitzWith 0 x t
+theorem witnessCurve_of_nonneg {t : ℝ} (ht : 0 ≤ t) :
+    witnessCurve Φ s ρ₀ T t = steinWitness Φ s (ρ₀.map (T t)) := by
+  rw [witnessCurve, max_eq_left ht]
 
-end MeanFieldFlow
+section SolutionProperties
 
-/-! ### Theorem A.11: the time derivative of the Kullback–Leibler divergence -/
+variable (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ₀]
+  (hT : IsSolution Φ s Ω ρ₀ T)
+include hS hT
+
+/-- The particles of a solution move at speed at most `B C` (proof of Lemma 9). -/
+private theorem IsSolution.dist_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B)
+    (x : EuclideanSpace ℝ (Fin d)) {t t' : ℝ} (ht : 0 ≤ t) (ht' : 0 ≤ t') :
+    dist (T t x) (T t' x) ≤ B * C * |t - t'| := by
+  wlog h : t ≤ t' generalizing t t'
+  · rw [dist_comm, abs_sub_comm]
+    exact this ht' ht (le_of_not_ge h)
+  have hd (τ : ℝ) (hτ : τ ∈ Icc t t') :
+      HasDerivWithinAt (T · x) (drift Φ s (ρ₀.map (T τ)) (T τ x)) (Icc t t') τ :=
+    (hT.hasDerivWithinAt x τ (ht.trans hτ.1)).mono fun r hr ↦ ht.trans hr.1
+  have := norm_image_sub_le_of_norm_deriv_le_segment' hd (fun τ hτ ↦
+    norm_toVectorField_steinWitness_le hS hB (hT.ae_mem τ (ht.trans hτ.1)) _) t' ⟨h, le_rfl⟩
+  rwa [dist_comm, dist_eq_norm, abs_of_nonpos (sub_nonpos.2 h), neg_sub]
+
+/-- **Lemma 9 (Properties of the solutions)**, (i). Suppose that the standing assumptions hold, let
+`ρ₀ ∈ 𝒫(Ω)`, let `(T_t)_{t ≥ 0}` solve the continuous-time SVGD equation, and let `m(t) = φ*_{ρ_t}`.
+Then, `‖m(t) - m(t')‖_𝓗 ≤ ω(B C |t - t'|)` for all `t, t' ≥ 0`. -/
+theorem solution_properties_dist_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B)
+    {t t' : ℝ} (ht : 0 ≤ t) (ht' : 0 ≤ t') :
+    dist (witnessCurve Φ s ρ₀ T t) (witnessCurve Φ s ρ₀ T t') ≤
+      modulusOfContinuityOn (steinFeature Φ s) Ω (B * C * |t - t'|) := by
+  have hΩm := hS.measurableSet
+  -- By the witness estimate, as the particles move by at most `B C |t - t'|`.
+  rw [witnessCurve_of_nonneg ht, witnessCurve_of_nonneg ht']
+  exact dist_steinWitness_map_le hS (hT.continuous t ht).aemeasurable
+    (hT.continuous t' ht').aemeasurable
+    ((ae_map_iff (hT.continuous t ht).aemeasurable hΩm).1 (hT.ae_mem t ht))
+    ((ae_map_iff (hT.continuous t' ht').aemeasurable hΩm).1 (hT.ae_mem t' ht'))
+    (.of_forall fun x ↦ hT.dist_le hS hB x ht ht')
+
+/-- **Lemma 9 (Properties of the solutions)**, (i). The curve `m` of the Stein witnesses of a
+solution is continuous. -/
+theorem solution_properties_continuous : Continuous (witnessCurve Φ s ρ₀ T) := by
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  -- As `ω(r)` tends to `0` as `r` tends to `0`.
+  have hmax (τ : ℝ) : witnessCurve Φ s ρ₀ T τ = witnessCurve Φ s ρ₀ T (max τ 0) := by
+    simp [witnessCurve]
+  refine (Metric.uniformContinuous_of_continuity_modulus _
+    ((xi_regularity_uniformContinuousOn hS).tendsto_modulusOfContinuityOn_comp_mul_left (B * C))
+    (witnessCurve Φ s ρ₀ T) fun t t' ↦ ?_).continuous
+  rw [hmax t, hmax t', Real.dist_eq]
+  exact (solution_properties_dist_le hS hT hB (le_max_right _ _) (le_max_right _ _)).trans
+    (monotone_modulus_steinFeature hS
+      (mul_le_mul_of_nonneg_left (abs_max_sub_max_le_abs t t' 0) (by positivity)))
+
+/-- The Stein witnesses of a solution are bounded. -/
+private theorem exists_norm_witnessCurve_le : ∃ B : ℝ≥0, ∀ t, ‖witnessCurve Φ s ρ₀ T t‖ ≤ B := by
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  exact ⟨B, fun t ↦ norm_steinWitness_le hB (hT.ae_mem _ (le_max_right t 0))⟩
+
+/-- **Lemma 9 (Properties of the solutions)**, (ii). For every `t ≥ 0`, `T_t = T^m_t`, the
+positions of Lemma 5 for the curve `m` of the Stein witnesses. -/
+theorem solution_properties_eq_positions {t : ℝ} (ht : 0 ≤ t) :
+    T t = (trajectory Φ (witnessCurve Φ s ρ₀ T) 0 · t) := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  -- `t ↦ T_t(x)` solves the equation of Lemma 5 for `m`, from `x`: by uniqueness, it is `T^m_t(x)`.
+  funext x
+  refine positions_unique hS (solution_properties_continuous hS hT) hmB (α := (T · x))
+    (congrFun hT.zero x) (fun τ hτ ↦ ?_) ht
+  rw [witnessCurve_of_nonneg hτ]
+  exact hT.hasDerivWithinAt x τ hτ
+
+/-- **Lemma 9 (Properties of the solutions)**, (iii). For every `t ≥ 0`, `T_t` is a homeomorphism
+of `ℝᵈ`. -/
+theorem solution_properties_isHomeomorph {t : ℝ} (ht : 0 ≤ t) : IsHomeomorph (T t) := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  rw [solution_properties_eq_positions hS hT ht]
+  exact positions_isHomeomorph hS (solution_properties_continuous hS hT) hmB t
+
+/-- **Lemma 9 (Properties of the solutions)**, (iii). For every `t ≥ 0`, `T_t(Ω) = Ω`. -/
+theorem solution_properties_image {t : ℝ} (ht : 0 ≤ t) : T t '' Ω = Ω := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  rw [solution_properties_eq_positions hS hT ht]
+  exact positions_image hS (solution_properties_continuous hS hT) hmB t
+
+/-- **Lemma 9 (Properties of the solutions)**, (iv). The points of `∂Ω` are at rest:
+`T_t(z) = z` for all `z ∈ ∂Ω` and `t ≥ 0`. -/
+theorem solution_properties_boundary {z : EuclideanSpace ℝ (Fin d)} (hz : z ∈ frontier Ω)
+    {t : ℝ} (ht : 0 ≤ t) : T t z = z := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  -- The constant curve equal to `z` solves the equation of Lemma 5 for `m`, from `z`.
+  rw [solution_properties_eq_positions hS hT ht]
+  refine (positions_unique hS (solution_properties_continuous hS hT) hmB (α := fun _ ↦ z) rfl
+    (fun τ _ ↦ ?_) ht).symm
+  rw [hS.kernel.toVectorField_eq_zero _ _ hz]
+  exact hasDerivWithinAt_const _ _ _
+
+end SolutionProperties
+
+/-! ## The time derivative of the KL divergence
+
+### Decrease of the Kullback–Leibler divergence
+
+Theorem 6 (Time derivative of the KL divergence), `SVGD.time_derivative_kl`, is proved below,
+after the lemmas of its proof.
+
+### Strategy of the proof of Theorem 6
+
+The velocity field of the particles at time `t` is `v_t = b(·, ρ_t) = m(t)_Φ`, where `m` is the
+curve of the Stein witnesses (`SVGD.witnessCurve`), and `J_t(x) = det DT_t(x)`.
+
+### The Jacobian of `T_t` -/
+
+section Jacobian
+
+variable (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ₀]
+  (hT : IsSolution Φ s Ω ρ₀ T)
+include hS hT
+
+/-- **Lemma 10 (Jacobian of `T_t`)**, differentiability. Suppose that the standing assumptions hold,
+and let `(T_t)_{t ≥ 0}` solve the continuous-time SVGD equation. For every `t ≥ 0`, `T_t` is
+differentiable on `ℝᵈ`. -/
+theorem jacobian_differentiable {t : ℝ} (ht : 0 ≤ t) : Differentiable ℝ (T t) := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  rw [solution_properties_eq_positions hS hT ht]
+  exact differentiable_trajectory_apply hS.kernel.contDiff hS.kernel.lipschitzWith
+    (solution_properties_continuous hS hT) hmB 0 t
+
+/-- **Lemma 10 (Jacobian of `T_t`)**, (i). `J_t(x) > 0`. -/
+theorem jacobian_pos (x : EuclideanSpace ℝ (Fin d)) {t : ℝ} (ht : 0 ≤ t) :
+    0 < (fderiv ℝ (T t) x).det := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  rw [solution_properties_eq_positions hS hT ht]
+  exact det_fderiv_trajectory_pos hS.kernel.contDiff hS.kernel.lipschitzWith
+    (solution_properties_continuous hS hT) hmB 0 x t
+
+/-- **Lemma 10 (Jacobian of `T_t`)**, (ii). `∂ₜ log J_t(x) = ∇ · v_t(T_t(x))`, with a right
+derivative at `t = 0`. -/
+theorem jacobian_hasDerivWithinAt (x : EuclideanSpace ℝ (Fin d)) {t : ℝ} (ht : 0 ≤ t) :
+    HasDerivWithinAt (fun t ↦ Real.log (fderiv ℝ (T t) x).det)
+      (divergence ℝ (drift Φ s (ρ₀.map (T t))) (T t x)) (Ici 0) t := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  have h := hasDerivAt_log_det_fderiv_trajectory hS.kernel.contDiff hS.kernel.lipschitzWith
+    (solution_properties_continuous hS hT) hmB 0 x t
+  have hTt : T t x = trajectory Φ (witnessCurve Φ s ρ₀ T) 0 x t :=
+    congrFun (solution_properties_eq_positions hS hT ht) x
+  rw [witnessCurve_of_nonneg ht, ← hTt] at h
+  exact h.hasDerivWithinAt.congr
+    (fun τ hτ ↦ by simp only [solution_properties_eq_positions hS hT hτ])
+    (by simp only [solution_properties_eq_positions hS hT ht])
+
+/-- **Lemma 10 (Jacobian of `T_t`)**, (iii). `|log J_t(x)| ≤ d B K t`, where `B` bounds `‖ξ_x‖_𝓗`
+on `Ω`. -/
+theorem jacobian_abs_log_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B)
+    (x : EuclideanSpace ℝ (Fin d)) {t : ℝ} (ht : 0 ≤ t) :
+    |Real.log (fderiv ℝ (T t) x).det| ≤ d * B * K * t := by
+  have hmB (τ : ℝ) : ‖witnessCurve Φ s ρ₀ T τ‖ ≤ B :=
+    norm_steinWitness_le hB (hT.ae_mem _ (le_max_right τ 0))
+  rw [solution_properties_eq_positions hS hT ht]
+  have := abs_log_det_fderiv_trajectory_le hS.kernel.contDiff hS.kernel.lipschitzWith
+    (solution_properties_continuous hS hT) hmB 0 x t
+  rwa [sub_zero, abs_of_nonneg ht, ← mul_assoc] at this
+
+end Jacobian
+
+/-! ### Differentiation of the KL divergence -/
 
 section TimeDerivativeKL
 
-variable [CompleteSpace H₀]
-variable (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure μ] (hKL : klDiv μ π ≠ ∞)
-include hS hKL
+variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C)
+  [IsProbabilityMeasure ρ₀] (hKL : klDiv ρ₀ π ≠ ∞) (hT : IsSolution Φ s Ω ρ₀ T)
+include hS hKL hT
 
-/-- **Time derivative of the KL divergence**, for every solution of the mean-field equation (Theorem
-A.11 of [Serre2025]). Let `m` be a continuous bounded solution of the mean-field equation from `μ`
-(`SVGD.IsMeanFieldCurve Φ s μ m`), with flow `T_t = trajectory Φ m 0 · t`, and let `μ_t = (T_t)#μ`.
-If `KL(μ ‖ π) < ∞`, then `d/dt KL(μ_t ‖ π) = -𝔎(μ_t ∣ π)` for every `t ≥ 0`. -/
-theorem time_derivative_kl' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hmφ : IsMeanFieldCurve Φ s μ m) {t : ℝ} (ht : 0 ≤ t) :
-    HasDerivAt (fun t ↦ (klDiv (μ.map (trajectory Φ m 0 · t)) π).toReal)
-      (-𝔎[Φ, s] (μ.map (trajectory Φ m 0 · t))) t := by
-  have hμΩ : ∀ᵐ x ∂μ, x ∈ Ω := hS.ae_mem hKL
-  have hμt := hS.ae_map_trajectory_mem hm hmB hμΩ t
-  -- The general dissipation formula gives `d/dt KL(μ_t ‖ π) = -E_{μ_t}[𝒜_π (m t)]`.
-  obtain ⟨hπ, -, hp, hpc, hp₀, hs, hsc⟩ := hS.target
-  have h : HasDerivAt (fun t ↦ (klDiv (μ.map (trajectory Φ m 0 · t)) π).toReal)
-      (-∫ y, steinOperator s (toVectorField Φ (m t)) y ∂(μ.map (trajectory Φ m 0 · t))) t := by
-    have := hasDerivAt_toReal_klDiv_map_trajectory hS.isCompact hp hpc hp₀ hS.kernel.contDiff
-      hS.kernel.lipschitzWith hS.kernel.eq_zero_of_mem_frontier hm hmB (hπ ▸ hKL) hs hsc t
-    rw [← hπ] at this
-    exact this
-  -- By Theorem A.7, `E_{μ_t}[𝒜_π (m t)] = ⟪m t, φ*_{μ_t}⟫`, and `m t = φ*_{μ_t}`, so this is
-  -- `‖φ*_{μ_t}‖² = 𝔎(μ_t ∣ π)`.
-  rwa [steepest_trajectory_integral hS hμt, ← hmφ t ht, real_inner_self_eq_norm_sq,
-    hmφ t ht, ← steepest_trajectory_ksd hS hμt] at h
+omit [CompleteSpace H₀] in
+/-- **Theorem 6 (Time derivative of the KL divergence)**, finiteness. Suppose that the standing
+assumptions hold. Let `ρ₀` be a probability measure with `KL(ρ₀ ‖ π) < ∞`, let `(T_t)_{t ≥ 0}` solve
+the continuous-time SVGD equation, and let `ρ_t = (T_t)#ρ₀`. Then, `KL(ρ_t ‖ π) < ∞` for every
+`t ≥ 0`. -/
+theorem time_derivative_kl_ne_top {t : ℝ} (ht : 0 ≤ t) : klDiv (ρ₀.map (T t)) π ≠ ∞ := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  obtain ⟨hπ, -, hp, hpc, hp₀, -, -⟩ := hS.target
+  -- By Lemma 9 (ii), Lemma 10 and Lemma 2.
+  rw [solution_properties_eq_positions hS hT ht]
+  subst hπ
+  exact klDiv_map_trajectory_ne_top hS.isCompact hp hpc hp₀ hS.kernel.contDiff
+    hS.kernel.lipschitzWith hS.kernel.eq_zero_of_mem_frontier
+    (solution_properties_continuous hS hT) hmB hKL t
 
-/-- **Time derivative of the KL divergence** (Theorem A.11 of [Serre2025]). Let `μ ∈ 𝒫(Ω)` with
-`KL(μ ‖ π) < ∞`, and let `μ_t = (T_t)#μ` along the mean-field SVGD flow. Then
-`d/dt KL(μ_t ‖ π) = -𝔎(μ_t ∣ π)` for every `t ≥ 0`. -/
+/-- **Theorem 6 (Time derivative of the KL divergence).** Under the same assumptions,
+`t ↦ KL(ρ_t ‖ π)` is differentiable on `[0, ∞)`, with a right derivative at `0`, and
+`d/dt KL(ρ_t ‖ π) = -𝔎(ρ_t ∣ π)`. -/
 theorem time_derivative_kl {t : ℝ} (ht : 0 ≤ t) :
-    HasDerivAt (fun t ↦ (klDiv (μ.map (meanFieldFlow Φ s μ t)) π).toReal)
-      (-𝔎[Φ, s] (μ.map (meanFieldFlow Φ s μ t))) t :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  time_derivative_kl' hS hKL continuous_meanFieldCurve hmB
-    (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL)) ht
+    HasDerivWithinAt (fun t ↦ (klDiv (ρ₀.map (T t)) π).toReal) (-𝔎[Φ, s] (ρ₀.map (T t)))
+      (Ici 0) t := by
+  obtain ⟨B, hmB⟩ := exists_norm_witnessCurve_le hS hT
+  obtain ⟨hπ, -, hp, hpc, hp₀, hs, hsc⟩ := hS.target
+  -- Lemma 2 with `Ψ = T_t = T^m_t` (Lemma 9 (ii)), Lemma 10, and the Leibniz integral rule give
+  -- `d/dt KL(ρ_t ‖ π) = -E_{y ∼ ρ_t}[𝒜_s v_t(y)]`.
+  have h := hasDerivAt_toReal_klDiv_map_trajectory hS.isCompact hp hpc hp₀ hS.kernel.contDiff
+    hS.kernel.lipschitzWith hS.kernel.eq_zero_of_mem_frontier
+    (solution_properties_continuous hS hT) hmB (hπ ▸ hKL) hs hsc t
+  rw [← hπ] at h
+  refine (h.hasDerivWithinAt.congr
+    (fun τ hτ ↦ by simp only [solution_properties_eq_positions hS hT hτ])
+    (by simp only [solution_properties_eq_positions hS hT ht])).congr_deriv ?_
+  -- As `v_t` is the vector field of the Stein witness of `ρ_t`, Theorem 2 (ii) gives
+  -- `E_{y ∼ ρ_t}[𝒜_s v_t(y)] = 𝔎(ρ_t ∣ π)`.
+  rw [← solution_properties_eq_positions hS hT ht, witnessCurve_of_nonneg ht,
+    stein_witness_ksd_eq_integral hS (hT.ae_mem t ht)]
+  simp only [steinOperator]
 
-/-- **Time derivative of the KL divergence**, for every solution of the mean-field equation (Theorem
-A.11 of [Serre2025]). Let `m` be a continuous bounded solution of the mean-field equation from `μ`
-(`SVGD.IsMeanFieldCurve Φ s μ m`), with flow `T_t = trajectory Φ m 0 · t`, and let `μ_t = (T_t)#μ`.
-If `KL(μ ‖ π) < ∞`, then `t ↦ KL(μ_t ‖ π)` is non-increasing on `[0, ∞)`, as `𝔎(μ_t ∣ π) ≥ 0`. -/
-theorem time_derivative_kl_antitoneOn' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hmφ : IsMeanFieldCurve Φ s μ m) :
-    AntitoneOn (fun t ↦ (klDiv (μ.map (trajectory Φ m 0 · t)) π).toReal) (Ici 0) := by
-  have hderiv {t : ℝ} (ht : 0 ≤ t) := time_derivative_kl' hS hKL hm hmB hmφ ht
-  refine antitoneOn_of_deriv_nonpos (convex_Ici 0)
-    (fun t ht ↦ (hderiv ht).continuousAt.continuousWithinAt)
-    (fun t ht ↦ (hderiv (interior_subset ht)).differentiableAt.differentiableWithinAt)
-    fun t ht ↦ ?_
-  rw [(hderiv (interior_subset ht)).deriv, neg_nonpos]
-  exact ksd_nonneg _
-
-/-- **Time derivative of the KL divergence** (Theorem A.11 of [Serre2025]). Let `μ ∈ 𝒫(Ω)` with
-`KL(μ ‖ π) < ∞`. As `𝔎(μ_t ∣ π) ≥ 0`, the Kullback–Leibler divergence `KL(μ_t ‖ π)` is
-non-increasing along the mean-field SVGD flow. -/
+/-- **Theorem 6 (Time derivative of the KL divergence)**, monotonicity. `t ↦ KL(ρ_t ‖ π)` is
+nonincreasing on `[0, ∞)`. -/
 theorem time_derivative_kl_antitoneOn :
-    AntitoneOn (fun t ↦ (klDiv (μ.map (meanFieldFlow Φ s μ t)) π).toReal) (Ici 0) :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  time_derivative_kl_antitoneOn' hS hKL continuous_meanFieldCurve hmB
-    (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL))
+    AntitoneOn (fun t ↦ (klDiv (ρ₀.map (T t)) π).toReal) (Ici 0) := by
+  -- As `𝔎(ρ_t ∣ π) ≥ 0`, by the mean value theorem.
+  have hderiv {t : ℝ} (ht : 0 < t) := (time_derivative_kl hS hKL hT ht.le).hasDerivAt
+    (Ici_mem_nhds ht)
+  refine antitoneOn_of_deriv_nonpos (convex_Ici 0)
+    (fun t ht ↦ (time_derivative_kl hS hKL hT ht).continuousWithinAt)
+    (fun t ht ↦ (hderiv (by simpa using ht)).differentiableAt.differentiableWithinAt)
+    fun t ht ↦ ?_
+  rw [(hderiv (by simpa using ht)).deriv, neg_nonpos]
+  exact ksd_nonneg _
 
 end TimeDerivativeKL
 
-/-! ## Appendix B: proofs of Proposition 3.2 and Theorem 3.1 -/
+/-! ## Convergence
 
-variable [CompleteSpace H₀]
+### Weak convergence and Stein-universal kernels
 
-/-! ### Proposition 3.2: the KSD is a valid discrepancy -/
+A sequence `(ρ_n)` of `𝒫(Ω)` converges weakly to `ρ ∈ 𝒫(Ω)` if `E_{x ∼ ρ_n}[g(x)] → E_{x ∼ ρ}[g(x)]`
+for every `g ∈ C⁰(Ω)`. Here, `g ∈ C⁰(Ω)` is a function `g : ℝᵈ → ℝ` continuous on `Ω`, whose values
+outside `Ω` do not matter, and the restriction `ρ|_Ω` of `ρ` to `Ω` is the measure
+`ρ.comap ((↑) : Ω → ℝᵈ)` on the subtype `Ω`. -/
 
-section KSDValidDiscrepancy
+section KSDZero
 
-variable (hS : StandingAssumptions Ω π p s Φ K C) (hU : IsSteinUniversal Φ s Ω)
-  [IsProbabilityMeasure ν] (hν : ∀ᵐ x ∂ν, x ∈ Ω)
-include hS hU hν
+variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure ρ]
+  (hρ : ∀ᵐ x ∂ρ, x ∈ Ω)
+include hS hρ
 
-/-- **KSD valid discrepancy** (Proposition 3.2 of [Serre2025]). If the kernel is Stein-universal,
-then for every `ν ∈ 𝒫(Ω)`, `ν = π ⟺ 𝔎(ν ∣ π) = 0`. -/
-theorem ksd_valid_discrepancy : ν = π ↔ 𝔎[Φ, s] ν = 0 := by
+/-- **Characterization of a zero KSD**, first equivalence. For `ρ ∈ 𝒫(Ω)`,
+`𝔎(ρ ∣ π) = 0 ⟺ φ*_ρ = 0`. -/
+theorem ksd_eq_zero_iff : 𝔎[Φ, s] ρ = 0 ↔ steinWitness Φ s ρ = 0 := by
+  rw [stein_witness_ksd hS hρ, sq_eq_zero_iff, norm_eq_zero]
+
+/-- **Characterization of a zero KSD**, second equivalence. For `ρ ∈ 𝒫(Ω)`,
+`φ*_ρ = 0 ⟺ ∀ f ∈ 𝓗, E_{x ∼ ρ}[𝒜_s f_Φ(x)] = 0`. -/
+theorem steinWitness_eq_zero_iff :
+    steinWitness Φ s ρ = 0 ↔ ∀ f, ∫ x, steinOperator s (toVectorField Φ f) x ∂ρ = 0 := by
+  simp_rw [stein_witness hS hρ]
+  -- The converse implication follows by taking `f = φ*_ρ`.
+  exact ⟨fun h f ↦ by rw [h, inner_zero_right], fun h ↦ by
+    simpa [real_inner_self_eq_norm_sq] using h (steinWitness Φ s ρ)⟩
+
+end KSDZero
+
+/-- **Definition 3 (Stein-universal kernel).** The kernel is Stein-universal if the set of the
+functions `𝒜_s f_Φ + c`, for `f ∈ 𝓗` and `c ∈ ℝ`, restricted to `Ω`, is dense in `C⁰(Ω)` for the
+uniform convergence on `Ω`. As `Ω` is compact, the topology of `C(Ω, ℝ)` is that of the uniform
+convergence on `Ω`. -/
+def IsSteinUniversal (Φ : EuclideanSpace ℝ (Fin d) → H₀)
+    (s : EuclideanSpace ℝ (Fin d) → StrongDual ℝ (EuclideanSpace ℝ (Fin d)))
+    (Ω : Set (EuclideanSpace ℝ (Fin d))) : Prop :=
+  Dense {g : C(Ω, ℝ) | ∃ f : 𝓗[d, H₀], ∃ c : ℝ,
+    ∀ x : Ω, g x = steinOperator s (toVectorField Φ f) x + c}
+
+open scoped Classical in
+/-- The extension by `0` of a function of `C(Ω, ℝ)` is continuous on `Ω`. -/
+private theorem continuousOn_dite (g : C(Ω, ℝ)) :
+    ContinuousOn (fun x ↦ if hx : x ∈ Ω then g ⟨x, hx⟩ else 0) Ω := by
+  rw [continuousOn_iff_continuous_domRestrict]
+  convert g.continuous with x
+  simp
+
+/-- **Definition 3 (Stein-universal kernel)**, unfolded. Suppose that the standing assumptions
+hold. The kernel is Stein-universal if and only if, for every `g ∈ C⁰(Ω)` and every `η > 0`, there
+are `f ∈ 𝓗` and `c ∈ ℝ` such that `sup_{x ∈ Ω} |g(x) - 𝒜_s f_Φ(x) - c| ≤ η`. -/
+theorem isSteinUniversal_iff (hS : StandingAssumptions Ω π p s Φ K C) :
+    IsSteinUniversal Φ s Ω ↔ ∀ g : EuclideanSpace ℝ (Fin d) → ℝ, ContinuousOn g Ω → ∀ η > 0,
+      ∃ f : 𝓗[d, H₀], ∃ c : ℝ, ∀ x ∈ Ω, |g x - steinOperator s (toVectorField Φ f) x - c| ≤ η := by
+  have : CompactSpace Ω := isCompact_iff_compactSpace.1 hS.isCompact
+  refine ⟨fun hU g hg η hη ↦ ?_, fun h g ↦ Metric.mem_closure_iff.2 fun η hη ↦ ?_⟩
+  · obtain ⟨_, ⟨f, c, hfc⟩, hdist⟩ :=
+      Metric.mem_closure_iff.1 (hU ⟨Ω.domRestrict g, hg.domRestrict⟩) η hη
+    refine ⟨f, c, fun x hx ↦ ?_⟩
+    have := (ContinuousMap.dist_apply_le_dist ⟨x, hx⟩).trans hdist.le
+    simpa [hfc, Real.dist_eq, sub_add_eq_sub_sub] using this
+  · obtain ⟨f, c, hfc⟩ := h _ (continuousOn_dite g) (η / 2) (half_pos hη)
+    refine ⟨⟨fun x ↦ steinOperator s (toVectorField Φ f) x + c,
+      ((continuousOn_steinOperator hS f).add continuousOn_const).domRestrict⟩, ⟨f, c, fun _ ↦ rfl⟩,
+      ((ContinuousMap.dist_le (half_pos hη).le).2 fun x ↦ ?_).trans_lt (half_lt_self hη)⟩
+    rw [Real.dist_eq]
+    change |g x - (steinOperator s (toVectorField Φ f) x + c)| ≤ η / 2
+    rw [← sub_sub]
+    simpa using hfc x x.property
+
+/-- If `|g - A - c| ≤ η` on `Ω` and `E_μ[A] = 0` for a probability measure `μ` carried by `Ω`,
+then `|E_μ[g] - c| ≤ η`. -/
+private theorem abs_integral_sub_le_of_integral_eq_zero {μ : Measure (EuclideanSpace ℝ (Fin d))}
+    [IsProbabilityMeasure μ] (hμ : ∀ᵐ x ∂μ, x ∈ Ω) {g A : EuclideanSpace ℝ (Fin d) → ℝ}
+    (hg : Integrable g μ) (hA : Integrable A μ) (hA₀ : ∫ x, A x ∂μ = 0) {c η : ℝ}
+    (h : ∀ x ∈ Ω, |g x - A x - c| ≤ η) : |∫ x, g x ∂μ - c| ≤ η := by
+  have hsub : ∫ x, g x ∂μ - c = ∫ x, (g x - A x - c) ∂μ := by
+    rw [integral_sub (f := fun x ↦ g x - A x) (hg.sub hA) (integrable_const c),
+      integral_sub hg hA, hA₀, integral_const]
+    simp
+  rw [hsub, ← Real.norm_eq_abs]
+  exact (norm_integral_le_of_norm_le_const (C := η)
+    (hμ.mono fun x hx ↦ by simpa [Real.norm_eq_abs] using h x hx)).trans_eq (by simp)
+
+/-- **Stein-universality through means.** Suppose that the standing assumptions hold. The kernel is
+Stein-universal if and only if, for every `g ∈ C⁰(Ω)` and every `η > 0`, there is `f ∈ 𝓗` such that
+`sup_{x ∈ Ω} |g(x) - E_{y ∼ π}[g(y)] - 𝒜_s f_Φ(x)| ≤ η`. -/
+theorem isSteinUniversal_iff_mean (hS : StandingAssumptions Ω π p s Φ K C) :
+    IsSteinUniversal Φ s Ω ↔ ∀ g : EuclideanSpace ℝ (Fin d) → ℝ, ContinuousOn g Ω → ∀ η > 0,
+      ∃ f : 𝓗[d, H₀], ∀ x ∈ Ω,
+        |g x - ∫ y, g y ∂π - steinOperator s (toVectorField Φ f) x| ≤ η := by
   have := hS.target.isProbabilityMeasure
-  have hπ : ∀ᵐ x ∂π, x ∈ Ω :=
-    hS.target.eq_withDensity ▸ ae_withDensity_restrict_mem hS.isCompact.measurableSet _
-  -- `⟹`: `𝔎(π ∣ π) = 0`, by Theorem A.8 at `μ = π`. The map `ε ↦ KL((I_d + ε φ*_π)#π ‖ π)` is
-  -- nonnegative and vanishes at `0`, so its derivative `-‖φ*_π‖²` at `0` vanishes. Stein's
-  -- identity would also give the result, but it requires `φ*_π` to be in the Stein class of `π`.
-  have hself : 𝔎[Φ, s] π = 0 := by
-    have hKL : klDiv π π ≠ ∞ := by simp
-    set φ := direction Φ s π
-    have hmin : IsLocalMin
-        (fun ε : ℝ ↦ (klDiv (π.map fun x ↦ x + ε • toVectorField Φ φ x) π).toReal) 0 :=
-      Filter.Eventually.of_forall fun ε ↦ by simp
-    have h₀ := hmin.hasDerivAt_eq_zero (kl_steepest_descent_hasDerivAt hS hKL φ)
-    rw [steepest_trajectory_ksd hS hπ, ← real_inner_self_eq_norm_sq]
-    linarith
-  refine ⟨fun h ↦ h ▸ hself, fun hK ↦ ?_⟩
-  -- `⟸`. By Theorem A.7, `𝔎(ρ ∣ π) = ‖φ*_ρ‖²` and `E_ρ[𝒜_π f] = ⟪f, φ*_ρ⟫` for `ρ ∈ 𝒫(Ω)`.
-  -- Hence, if `|g - 𝒜_π f - c| ≤ ε` on `Ω` and `𝔎(ρ ∣ π) = 0`, then
-  -- `|E_ρ[g] - c| = |E_ρ[g - 𝒜_π f - c]| ≤ ε`.
-  have : CompactSpace Ω := isCompact_iff_compactSpace.1 hS.isCompact
-  have hclose {ρ : Measure (EuclideanSpace ℝ (Fin d))} [IsProbabilityMeasure ρ]
-      (hρ : ∀ᵐ x ∂ρ, x ∈ Ω) (hKρ : 𝔎[Φ, s] ρ = 0)
-      (g : EuclideanSpace ℝ (Fin d) →ᵇ ℝ) (f : 𝓗[d, H₀]) {c ε : ℝ}
-      (hfc : ∀ x ∈ Ω, |g x - steinOperator s (toVectorField Φ f) x - c| ≤ ε) :
-      |∫ x, g x ∂ρ - c| ≤ ε := by
-    rw [steepest_trajectory_ksd hS hρ, sq_eq_zero_iff, norm_eq_zero] at hKρ
-    have h₀ : ∫ x, steinOperator s (toVectorField Φ f) x ∂ρ = 0 := by
-      rw [steepest_trajectory_integral hS hρ, hKρ, inner_zero_right]
-    have hgi : Integrable (fun x ↦ g x) ρ := g.integrable ρ
-    have hAi : Integrable (fun x ↦ steinOperator s (toVectorField Φ f) x) ρ :=
+  have hπ := hS.target.ae_mem hS.measurableSet
+  rw [isSteinUniversal_iff hS]
+  refine ⟨fun h g hg η hη ↦ ?_, fun h g hg η hη ↦ ?_⟩
+  · -- Apply Definition 3 with `η / 2`. Integrating against `π`, `|E_π[g] - c| ≤ η / 2`, as
+    -- `E_π[𝒜_s f_Φ] = 0` (Corollary 1).
+    obtain ⟨f, c, hfc⟩ := h g hg (η / 2) (half_pos hη)
+    have hA := stein_identity hS.isCompact hS.target (hS.kernel.contDiff_toVectorField f)
+      (hS.kernel.lipschitzWith_toVectorField f) (hS.kernel.toVectorField_eq_zero f)
+    have hAi := stein_identity_integrable hS.isCompact hS.target
+      (hS.kernel.contDiff_toVectorField f)
+    have hgi : Integrable g π := hg.integrable_of_ae_mem hS.isCompact hπ
+    have hc : |∫ y, g y ∂π - c| ≤ η / 2 :=
+      abs_integral_sub_le_of_integral_eq_zero hπ hgi hAi hA hfc
+    -- By the triangle inequality.
+    refine ⟨f, fun x hx ↦ ?_⟩
+    calc |g x - ∫ y, g y ∂π - steinOperator s (toVectorField Φ f) x|
+        = |(g x - steinOperator s (toVectorField Φ f) x - c) - (∫ y, g y ∂π - c)| := by ring_nf
+      _ ≤ |g x - steinOperator s (toVectorField Φ f) x - c| + |∫ y, g y ∂π - c| := abs_sub _ _
+      _ ≤ η / 2 + η / 2 := add_le_add (hfc x hx) hc
+      _ = η := add_halves η
+  · -- Definition 3 holds with `c = E_π[g]`.
+    obtain ⟨f, hf⟩ := h g hg η hη
+    exact ⟨f, ∫ y, g y ∂π, fun x hx ↦ by simpa [sub_sub, add_comm] using hf x hx⟩
+
+/-- **Proposition 1 (The KSD vanishes only at `π`).** Suppose that the standing assumptions hold,
+and that the kernel is Stein-universal. Then, `𝔎(ρ ∣ π) = 0 ⟺ ρ = π` for every `ρ ∈ 𝒫(Ω)`. -/
+theorem ksd_vanishes_only_at_target [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C)
+    (hU : IsSteinUniversal Φ s Ω) [IsProbabilityMeasure ρ] (hρ : ∀ᵐ x ∂ρ, x ∈ Ω) :
+    𝔎[Φ, s] ρ = 0 ↔ ρ = π := by
+  have := hS.target.isProbabilityMeasure
+  have hπ := hS.target.ae_mem hS.measurableSet
+  refine ⟨fun hK ↦ ?_, fun h ↦ h ▸ ksd_target_eq_zero hS⟩
+  -- By `SVGD.ksd_eq_zero_iff` and `SVGD.steinWitness_eq_zero_iff`, `E_ρ[𝒜_s f_Φ] = 0` for every
+  -- `f ∈ 𝓗`.
+  have h₀ := (steinWitness_eq_zero_iff hS hρ).1 ((ksd_eq_zero_iff hS hρ).1 hK)
+  -- By `SVGD.isSteinUniversal_iff_mean`, `E_ρ[g] = E_π[g]` for every `g ∈ C⁰(Ω)`.
+  have hg (g : EuclideanSpace ℝ (Fin d) → ℝ) (hgc : ContinuousOn g Ω) :
+      ∫ x, g x ∂ρ = ∫ x, g x ∂π := eq_of_forall_dist_le fun η hη ↦ by
+    obtain ⟨f, hf⟩ := (isSteinUniversal_iff_mean hS).1 hU g hgc η hη
+    have hgi : Integrable g ρ := hgc.integrable_of_ae_mem hS.isCompact hρ
+    have hAi : Integrable (steinOperator s (toVectorField Φ f)) ρ :=
       (continuousOn_steinOperator hS f).integrable_of_ae_mem hS.isCompact hρ
-    have hsub : ∫ x, g x ∂ρ - c =
-        ∫ x, (g x - steinOperator s (toVectorField Φ f) x - c) ∂ρ := by
-      rw [integral_sub (f := fun x ↦ g x - steinOperator s (toVectorField Φ f) x)
-        (hgi.sub hAi) (integrable_const c), integral_sub hgi hAi, h₀, integral_const]
-      simp
-    rw [hsub, ← Real.norm_eq_abs]
-    exact (norm_integral_le_of_norm_le_const (C := ε)
-      (hρ.mono fun x hx ↦ by simpa [Real.norm_eq_abs] using hfc x hx)).trans (by simp)
-  -- Let `g` be bounded continuous and `ε > 0`. By Stein-universality, some `𝒜_π f + c` is
-  -- `ε / 2`-close to `g` on `Ω`. As `𝔎(ν ∣ π) = 𝔎(π ∣ π) = 0`, `|E_ν[g] - E_π[g]| ≤ ε`.
-  have key (g : EuclideanSpace ℝ (Fin d) →ᵇ ℝ) : ∫ x, g x ∂ν = ∫ x, g x ∂π :=
-    eq_of_forall_dist_le fun ε hε ↦ by
-      obtain ⟨φ, ⟨f, c, hφ⟩, hdist⟩ :=
-        hU.exists_dist_lt ((g : C(EuclideanSpace ℝ (Fin d), ℝ)).restrict Ω) (half_pos hε)
-      have hfc (x : EuclideanSpace ℝ (Fin d)) (hx : x ∈ Ω) :
-          |g x - steinOperator s (toVectorField Φ f) x - c| ≤ ε / 2 := by
-        have := (ContinuousMap.dist_apply_le_dist ⟨x, hx⟩).trans hdist.le
-        simpa [hφ, Real.dist_eq, sub_add_eq_sub_sub] using this
-      calc dist (∫ x, g x ∂ν) (∫ x, g x ∂π) ≤ |∫ x, g x ∂ν - c| + |∫ x, g x ∂π - c| := by
-            rw [Real.dist_eq, abs_sub_comm (∫ x, g x ∂π)]
-            exact abs_sub_le _ _ _
-        _ ≤ ε / 2 + ε / 2 := add_le_add (hclose hν hK g f hfc) (hclose hπ hself g f hfc)
-        _ = ε := add_halves ε
-  -- Two finite measures with the same integrals of bounded continuous functions are equal.
-  exact ext_of_forall_integral_eq_of_IsFiniteMeasure key
-
-end KSDValidDiscrepancy
-
-/-! ### Theorem 3.1: weak convergence of SVGD -/
-
-section WeakConvergence
-
-variable (hS : StandingAssumptions Ω π p s Φ K C) [IsProbabilityMeasure μ]
-include hS
-
-/-- **Uniform continuity of the KSD**, for every continuous bounded curve (Lemma B.4 of
-[Serre2025]). Let `m` be a continuous curve bounded by `B`, with flow `T_t = trajectory Φ m 0 · t`,
-and let `μ ∈ 𝒫(Ω)` and `μ_t = (T_t)#μ`. Then `t ↦ 𝔎(μ_t ∣ π)` is uniformly continuous on `ℝ`. -/
-theorem ksd_uniform_continuity' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B) (hμ : ∀ᵐ x ∂μ, x ∈ Ω) :
-    UniformContinuous fun t ↦ 𝔎[Φ, s] (μ.map (trajectory Φ m 0 · t)) := by
-  have hK := hS.kernel
-  obtain ⟨D, hD⟩ := xi_regularity_exists_bound hS
-  have hμt (t : ℝ) := hS.ae_map_trajectory_mem hm hmB hμ t
-  -- Steps 1 and 2: the trajectories are `B C`-Lipschitz in time, and `ξ` is uniformly
-  -- continuous on `Ω` (Lemma A.6), so `t ↦ φ*_{μ_t} = ∫ ξ_{T_t x} dμ(x)` is uniformly continuous.
-  have hφ : UniformContinuous fun t ↦ direction Φ s (μ.map (trajectory Φ m 0 · t)) :=
-    Metric.uniformContinuous_iff.2 fun _ hε ↦
-      (exists_dist_integral_map_trajectory_lt hS.isCompact hK.lipschitzWith hK.norm_le
-        hK.eq_zero_of_mem_frontier (xi_regularity_uniformContinuousOn hS) hμ B hε).imp
-        fun _ ⟨hδ, h⟩ ↦ ⟨hδ, fun {_ _} ↦ h m hm hmB 0 _ _⟩
-  -- Step 3: `𝔎(μ_t ∣ π) = ‖φ*_{μ_t}‖²` (Theorem A.7), and `x ↦ ‖x‖²` is uniformly continuous on the
-  -- ball of radius `D`, which contains every `φ*_{μ_t}` (Lemma A.6).
-  have heq : (fun t ↦ ‖direction Φ s (μ.map (trajectory Φ m 0 · t))‖ ^ 2) =
-      fun t ↦ 𝔎[Φ, s] (μ.map (trajectory Φ m 0 · t)) :=
-    funext fun t ↦ (steepest_trajectory_ksd hS (hμt t)).symm
-  rw [← heq, ← uniformContinuousOn_univ]
-  exact (isCompact_Icc.uniformContinuousOn_of_continuous (continuous_pow 2).continuousOn).comp
-    (uniformContinuous_norm.comp hφ).uniformContinuousOn
-    fun t _ ↦ ⟨norm_nonneg _, xi_regularity_norm_direction_le hD (hμt t)⟩
-
-/-- **Uniform continuity of the KSD** (Lemma B.4 of [Serre2025]). Let `μ ∈ 𝒫(Ω)` and let
-`μ_t = (T_t)#μ` along the mean-field SVGD flow. Then `t ↦ 𝔎(μ_t ∣ π)` is uniformly continuous. -/
-theorem ksd_uniform_continuity (hμ : ∀ᵐ x ∂μ, x ∈ Ω) :
-    UniformContinuous fun t ↦ 𝔎[Φ, s] (μ.map (meanFieldFlow Φ s μ t)) :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  ksd_uniform_continuity' hS continuous_meanFieldCurve hmB hμ
-
-variable (hKL : klDiv μ π ≠ ∞)
-include hKL
-
-/-- **Convergence of the KSD**, for every solution of the mean-field equation (Corollary B.5 of
-[Serre2025]). Let `m` be a continuous bounded solution of the mean-field equation from `μ`
-(`SVGD.IsMeanFieldCurve Φ s μ m`), with flow `T_t = trajectory Φ m 0 · t`, and let `μ_t = (T_t)#μ`.
-If `KL(μ ‖ π) < ∞`, then `𝔎(μ_t ∣ π) → 0` as `t → ∞`. -/
-theorem ksd_convergence' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hmφ : IsMeanFieldCurve Φ s μ m) :
-    Tendsto (fun t ↦ 𝔎[Φ, s] (μ.map (trajectory Φ m 0 · t))) atTop (𝓝 0) := by
-  have hμ : ∀ᵐ x ∂μ, x ∈ Ω := hS.ae_mem hKL
-  -- `F(t) = KL(μ_t ‖ π) ≥ 0` has derivative `-g(t) = -𝔎(μ_t ∣ π)` (Theorem A.11), and `g ≥ 0` is
-  -- uniformly continuous (Lemma B.4). Barbalat's lemma gives `g(t) → 0`.
-  refine tendsto_zero_of_hasDerivWithinAt_neg_of_uniformContinuousOn (a := 0) (c := 0)
-    (fun t ht ↦ (time_derivative_kl' hS hKL hm hmB hmφ ht).hasDerivWithinAt)
-    (fun _ _ ↦ ENNReal.toReal_nonneg) (fun _ _ ↦ ksd_nonneg _)
-    (ksd_uniform_continuity' hS hm hmB hμ).uniformContinuousOn
-
-/-- **Convergence of the KSD** (Corollary B.5 of [Serre2025]). Let `μ ∈ 𝒫(Ω)` with `KL(μ ‖ π) < ∞`.
-Along the mean-field SVGD flow, `𝔎(μ_t ∣ π) → 0` as `t → ∞`. -/
-theorem ksd_convergence :
-    Tendsto (fun t ↦ 𝔎[Φ, s] (μ.map (meanFieldFlow Φ s μ t))) atTop (𝓝 0) :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  ksd_convergence' hS hKL continuous_meanFieldCurve hmB
-    (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL))
-
-/-- **Cluster points**, for every solution of the mean-field equation (Lemma B.6 of [Serre2025]).
-Let `m` be a continuous bounded solution of the mean-field equation from `μ`
-(`SVGD.IsMeanFieldCurve Φ s μ m`), with flow `T_t = trajectory Φ m 0 · t`, and let `μ_t = (T_t)#μ`.
-Let `KL(μ ‖ π) < ∞`, and let `ν ∈ 𝒫(Ω)` and `t_n → ∞` be such that `μ_{t_n} ⇀ ν`, i.e.
-`E_{μ_{t_n}}[g] → E_ν[g]` for every `g` continuous on `Ω`. Then `𝔎(ν ∣ π) = 0`. -/
-theorem cluster_points' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hmφ : IsMeanFieldCurve Φ s μ m) {t : ℕ → ℝ}
-    (ht : Tendsto t atTop atTop) [IsProbabilityMeasure ν]
-    (hν : ∀ᵐ x ∂ν, x ∈ Ω)
-    (hconv : ∀ g : EuclideanSpace ℝ (Fin d) → ℝ, ContinuousOn g Ω →
-      Tendsto (fun n ↦ ∫ x, g x ∂μ.map (trajectory Φ m 0 · (t n))) atTop (𝓝 (∫ x, g x ∂ν))) :
-    𝔎[Φ, s] ν = 0 := by
-  have hμ : ∀ᵐ x ∂μ, x ∈ Ω := hS.ae_mem hKL
-  have hμt (τ : ℝ) := hS.ae_map_trajectory_mem hm hmB hμ τ
-  set φ := direction Φ s ν
-  -- We compute the limit of `a_n = ⟪φ*_ν, φ*_{μ_{t_n}}⟫` in two ways.
-  -- First limit: by Theorem A.7, `a_n = E_{μ_{t_n}}[𝒜_π φ*_ν]`, and `𝒜_π φ*_ν` is continuous on
-  -- `Ω`, so `a_n → E_ν[𝒜_π φ*_ν] = ⟪φ*_ν, φ*_ν⟫ = ‖φ*_ν‖²`.
-  have hA (n : ℕ) : ∫ x, steinOperator s (toVectorField Φ φ) x ∂μ.map (trajectory Φ m 0 · (t n)) =
-      ⟪φ, direction Φ s (μ.map (trajectory Φ m 0 · (t n)))⟫ :=
-    steepest_trajectory_integral hS (hμt (t n)) φ
-  have h₁ : Tendsto (fun n ↦ ⟪φ, direction Φ s (μ.map (trajectory Φ m 0 · (t n)))⟫) atTop
-      (𝓝 (‖φ‖ ^ 2)) := by
-    have := hconv _ (continuousOn_steinOperator hS φ)
-    rwa [funext hA, steepest_trajectory_integral hS hν, real_inner_self_eq_norm_sq] at this
-  -- Second limit: `|a_n| ≤ ‖φ*_ν‖ ‖φ*_{μ_{t_n}}‖ = ‖φ*_ν‖ 𝔎(μ_{t_n} ∣ π)^{1/2} → 0` by
-  -- Corollary B.5.
-  have hφt : Tendsto (fun τ ↦ direction Φ s (μ.map (trajectory Φ m 0 · τ))) atTop (𝓝 0) := by
-    have hsq : Tendsto (fun τ ↦ ‖direction Φ s (μ.map (trajectory Φ m 0 · τ))‖ ^ 2) atTop (𝓝 0) :=
-      (ksd_convergence' hS hKL hm hmB hmφ).congr fun τ ↦ steepest_trajectory_ksd hS (hμt τ)
-    rw [tendsto_zero_iff_norm_tendsto_zero]
-    simpa [Function.comp_def, Real.sqrt_sq (norm_nonneg _)] using
-      (Real.continuous_sqrt.tendsto 0).comp hsq
-  have h₂ :
-      Tendsto (fun n ↦ ⟪φ, direction Φ s (μ.map (trajectory Φ m 0 · (t n)))⟫) atTop (𝓝 0) := by
-    simpa using (tendsto_const_nhds (x := φ)).inner (hφt.comp ht)
-  -- By uniqueness of the limit, `𝔎(ν ∣ π) = ‖φ*_ν‖² = 0`.
-  rw [steepest_trajectory_ksd hS hν]
-  exact tendsto_nhds_unique h₁ h₂
-
-/-- **Cluster points** (Lemma B.6 of [Serre2025]). Let `μ ∈ 𝒫(Ω)` with `KL(μ ‖ π) < ∞`, and let
-`μ_t = (T_t)#μ` along the mean-field SVGD flow. Let `ν ∈ 𝒫(Ω)` and `t_n → ∞` be such that
-`μ_{t_n} ⇀ ν`, i.e. `E_{μ_{t_n}}[g] → E_ν[g]` for every `g` continuous on `Ω`. Then `𝔎(ν ∣ π) = 0`.
--/
-theorem cluster_points {t : ℕ → ℝ} (ht : Tendsto t atTop atTop) [IsProbabilityMeasure ν]
-    (hν : ∀ᵐ x ∂ν, x ∈ Ω)
-    (hconv : ∀ g : EuclideanSpace ℝ (Fin d) → ℝ, ContinuousOn g Ω →
-      Tendsto (fun n ↦ ∫ x, g x ∂μ.map (meanFieldFlow Φ s μ (t n))) atTop (𝓝 (∫ x, g x ∂ν))) :
-    𝔎[Φ, s] ν = 0 :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  cluster_points' hS hKL continuous_meanFieldCurve hmB
-    (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL)) ht hν hconv
-
-/-- **Weak convergence of SVGD**, for every solution of the mean-field equation (Theorem 3.1 of
-[Serre2025]). Under the standing assumptions, let the kernel be Stein-universal. Let `m` be a
-continuous bounded solution of the mean-field equation from `μ` (`SVGD.IsMeanFieldCurve Φ s μ m`),
-with flow `T_t = trajectory Φ m 0 · t`, and let `μ_t = (T_t)#μ`. If `KL(μ ‖ π) < ∞`, then `μ_t ⇀ π`:
-for every `g` continuous on `Ω`, `E_{μ_t}[g] → E_π[g]` as `t → ∞`. -/
-theorem weak_convergence' (hm : Continuous m) (hmB : ∀ t, ‖m t‖ ≤ B)
-    (hmφ : IsMeanFieldCurve Φ s μ m)
-    (hU : IsSteinUniversal Φ s Ω) (g : EuclideanSpace ℝ (Fin d) → ℝ)
-    (hg : ContinuousOn g Ω) :
-    Tendsto (fun t ↦ ∫ x, g x ∂μ.map (trajectory Φ m 0 · t)) atTop (𝓝 (∫ x, g x ∂π)) := by
-  have : CompactSpace Ω := isCompact_iff_compactSpace.1 hS.isCompact
-  have hι := MeasurableEmbedding.subtypeVal hS.isCompact.measurableSet
-  have hμ : ∀ᵐ x ∂μ, x ∈ Ω := hS.ae_mem hKL
-  -- The measures `μ_t` are probability measures `u t` on `Ω`, as the flow maps are homeomorphisms
-  -- of `Ω`.
-  have hcomap : (μ.comap ((↑) : Ω → EuclideanSpace ℝ (Fin d))).map (↑) = μ := by
-    rw [map_comap_subtypeVal hS.isCompact.measurableSet, Measure.restrict_eq_self_of_ae_mem hμ]
-  have : IsProbabilityMeasure (μ.comap ((↑) : Ω → EuclideanSpace ℝ (Fin d))) :=
+    rw [Real.dist_eq]
+    exact abs_integral_sub_le_of_integral_eq_zero hρ hgi hAi (h₀ f) fun x hx ↦ by
+      rw [sub_right_comm]
+      exact hf x hx
+  -- Thus, `ρ|_Ω` and `π|_Ω` are two probability measures on the metric space `Ω` that give the
+  -- same integral to every bounded continuous function, hence are equal.
+  have hΩm := hS.measurableSet
+  have hι := MeasurableEmbedding.subtypeVal hΩm
+  have : IsProbabilityMeasure (ρ.comap ((↑) : Ω → EuclideanSpace ℝ (Fin d))) :=
     hι.isProbabilityMeasure_comap (by rwa [Subtype.range_coe])
-  choose T hT using fun t ↦ exists_homeomorph_trajectory hm hmB hS.kernel.lipschitzWith
-    hS.kernel.eq_zero_of_mem_frontier 0 t
-  set u : ℝ → ProbabilityMeasure Ω := fun t ↦ ⟨(μ.comap (↑)).map (T t), inferInstance⟩
-  have hu (t : ℝ) : (u t : Measure Ω).map (↑) = μ.map (trajectory Φ m 0 · t) := by
-    have hTt : (↑) ∘ T t = (trajectory Φ m 0 · t) ∘ ((↑) : Ω → EuclideanSpace ℝ (Fin d)) :=
-      funext (hT t)
-    rw [ProbabilityMeasure.coe_mk, Measure.map_map continuous_subtypeVal.measurable
-      (T t).continuous.measurable, hTt, ← Measure.map_map
-      (continuous_trajectory_apply hm hmB hS.kernel.lipschitzWith 0 t).measurable
-      continuous_subtypeVal.measurable, hcomap]
-  -- Weak convergence in `𝒫(Ω)` gives the convergence of `E[g]` for every `g` continuous on `Ω`.
-  have hweak {ρ : ℕ → ProbabilityMeasure Ω} {ν : ProbabilityMeasure Ω}
-      (hρ : Tendsto ρ atTop (𝓝 ν)) (g : EuclideanSpace ℝ (Fin d) → ℝ) (hg : ContinuousOn g Ω) :
-      Tendsto (fun n ↦ ∫ x, g x ∂(ρ n : Measure Ω).map (↑)) atTop
-        (𝓝 (∫ x, g x ∂(ν : Measure Ω).map (↑))) := by
-    have := ProbabilityMeasure.tendsto_iff_forall_integral_tendsto.1 hρ
+  have : IsProbabilityMeasure (π.comap ((↑) : Ω → EuclideanSpace ℝ (Fin d))) :=
+    hι.isProbabilityMeasure_comap (by rwa [Subtype.range_coe])
+  have hres : ρ.comap ((↑) : Ω → EuclideanSpace ℝ (Fin d)) = π.comap (↑) :=
+    ext_of_forall_integral_eq_of_IsFiniteMeasure fun h ↦ by
+      classical
+      have := hg (fun x ↦ if hx : x ∈ Ω then h ⟨x, hx⟩ else 0) (continuousOn_dite h.toContinuousMap)
+      rw [← Measure.restrict_eq_self_of_ae_mem hρ, ← Measure.restrict_eq_self_of_ae_mem hπ,
+        ← map_comap_subtypeVal hΩm, ← map_comap_subtypeVal hΩm, hι.integral_map,
+        hι.integral_map] at this
+      simpa using this
+  -- As `ρ` and `π` are determined by their restrictions to `Ω`, `ρ = π`.
+  rw [← Measure.restrict_eq_self_of_ae_mem hρ, ← Measure.restrict_eq_self_of_ae_mem hπ,
+    ← map_comap_subtypeVal hΩm, ← map_comap_subtypeVal hΩm, hres]
+
+/-! ### Convergence to the target distribution
+
+Theorem 7 (Convergence to the target distribution), `SVGD.convergence_to_target`, is proved
+below, after the lemmas of its proof.
+
+### Strategy of the proof of Theorem 7
+
+The proof has three steps: `𝔎(ρ_t ∣ π) → 0` (`SVGD.ksd_convergence`), the limit points of `ρ_t`
+have a zero KSD (`SVGD.limit_points_ksd_eq_zero`), and these limit points are `π`
+(`SVGD.convergence_to_target`).
+
+### The KSD tends to zero -/
+
+/-- **Lemma 11 (Barbalat).** Let `u : [0, ∞) → [0, ∞)` be uniformly continuous, and let `M` be such
+that `∫₀ᵃ u(t) dt ≤ M` for every `a ≥ 0`. Then, `u(t) → 0` as `t → ∞`. -/
+theorem barbalat {u : ℝ → ℝ} (hu : UniformContinuousOn u (Ici 0))
+    (hu₀ : ∀ t ∈ Ici (0 : ℝ), 0 ≤ u t) {M : ℝ} (hM : ∀ a ∈ Ici (0 : ℝ), ∫ t in 0..a, u t ≤ M) :
+    Tendsto u atTop (𝓝 0) :=
+  tendsto_zero_of_uniformContinuousOn_of_integral_le hu hu₀ hM
+
+section KSDConvergence
+
+variable [CompleteSpace H₀] (hS : StandingAssumptions Ω π p s Φ K C)
+  [IsProbabilityMeasure ρ₀] (hT : IsSolution Φ s Ω ρ₀ T)
+include hS hT
+
+/-- **Lemma 12 (Uniform continuity of the KSD)**, bound. Suppose that the standing assumptions hold,
+let `ρ₀ ∈ 𝒫(Ω)`, let `(T_t)_{t ≥ 0}` solve the continuous-time SVGD equation, and let
+`ρ_t = (T_t)#ρ₀`. Then, `|𝔎(ρ_t ∣ π) - 𝔎(ρ_{t'} ∣ π)| ≤ 2 B ω(B C |t - t'|)` for all `t, t' ≥ 0`. -/
+theorem ksd_uniform_continuity_le (hB : ∀ x ∈ Ω, ‖steinFeature Φ s x‖ ≤ B) {t t' : ℝ}
+    (ht : 0 ≤ t) (ht' : 0 ≤ t') :
+    |𝔎[Φ, s] (ρ₀.map (T t)) - 𝔎[Φ, s] (ρ₀.map (T t'))| ≤
+      2 * B * modulusOfContinuityOn (steinFeature Φ s) Ω (B * C * |t - t'|) := by
+  -- `𝔎(ρ_t ∣ π) = ‖φ*_{ρ_t}‖²` (Theorem 2 (ii)), and every Stein witness has norm at most `B`.
+  have h₁ := norm_steinWitness_le hB (hT.ae_mem t ht)
+  have h₂ := norm_steinWitness_le hB (hT.ae_mem t' ht')
+  have hd := solution_properties_dist_le hS hT hB ht ht'
+  rw [witnessCurve_of_nonneg ht, witnessCurve_of_nonneg ht', dist_eq_norm] at hd
+  rw [stein_witness_ksd hS (hT.ae_mem t ht), stein_witness_ksd hS (hT.ae_mem t' ht'), sq_sub_sq,
+    abs_mul, abs_of_nonneg (by positivity : 0 ≤ ‖steinWitness Φ s (ρ₀.map (T t))‖ +
+      ‖steinWitness Φ s (ρ₀.map (T t'))‖)]
+  calc (‖steinWitness Φ s (ρ₀.map (T t))‖ + ‖steinWitness Φ s (ρ₀.map (T t'))‖) *
+        |‖steinWitness Φ s (ρ₀.map (T t))‖ - ‖steinWitness Φ s (ρ₀.map (T t'))‖|
+      ≤ (2 * B) * ‖steinWitness Φ s (ρ₀.map (T t)) - steinWitness Φ s (ρ₀.map (T t'))‖ :=
+        mul_le_mul (by linarith) (abs_norm_sub_norm_le _ _) (abs_nonneg _) (by positivity)
+    _ ≤ 2 * B * modulusOfContinuityOn (steinFeature Φ s) Ω (B * C * |t - t'|) := by gcongr
+
+/-- **Lemma 12 (Uniform continuity of the KSD).** `t ↦ 𝔎(ρ_t ∣ π)` is uniformly continuous on
+`[0, ∞)`. -/
+theorem ksd_uniform_continuity :
+    UniformContinuousOn (fun t ↦ 𝔎[Φ, s] (ρ₀.map (T t))) (Ici 0) := by
+  obtain ⟨B, hB⟩ := xi_regularity_exists_bound hS
+  -- As `ω(r)` tends to `0` as `r` tends to `0`, `2 B ω(B C r)` is a continuity modulus.
+  have hω : Tendsto (fun r ↦ 2 * B * modulusOfContinuityOn (steinFeature Φ s) Ω (B * C * r))
+      (𝓝 0) (𝓝 0) := by
+    simpa using ((xi_regularity_uniformContinuousOn hS).tendsto_modulusOfContinuityOn_comp_mul_left
+      (B * C)).const_mul (2 * B : ℝ)
+  rw [uniformContinuousOn_iff_restrict]
+  refine Metric.uniformContinuous_of_continuity_modulus _ hω _ fun t t' ↦ ?_
+  rw [Real.dist_eq, Subtype.dist_eq, Real.dist_eq]
+  exact ksd_uniform_continuity_le hS hT hB t.property t'.property
+
+/-- **Corollary 2 (Convergence of the KSD).** Suppose that the standing assumptions hold. Let `ρ₀`
+be a probability measure with `KL(ρ₀ ‖ π) < ∞`, let `(T_t)_{t ≥ 0}` solve the continuous-time SVGD
+equation, and let `ρ_t = (T_t)#ρ₀`. Then, `𝔎(ρ_t ∣ π) → 0` as `t → ∞`. -/
+theorem ksd_convergence (hKL : klDiv ρ₀ π ≠ ∞) :
+    Tendsto (fun t ↦ 𝔎[Φ, s] (ρ₀.map (T t))) atTop (𝓝 0) := by
+  -- Let `F(t) = KL(ρ_t ‖ π)` and `u(t) = 𝔎(ρ_t ∣ π)`. By Theorem 6, `F' = -u`.
+  have hF {t : ℝ} (ht : 0 ≤ t) := time_derivative_kl hS hKL hT ht
+  have hu := ksd_uniform_continuity hS hT
+  -- By the fundamental theorem of calculus, `∫₀ᵃ u = F(0) - F(a) ≤ F(0)`, and Lemma 11 applies.
+  refine barbalat hu (fun _ _ ↦ ksd_nonneg _) (M := (klDiv (ρ₀.map (T 0)) π).toReal)
+    fun a ha ↦ ?_
+  have hFTC := intervalIntegral.integral_eq_sub_of_hasDeriv_right_of_le (f := fun t ↦
+    (klDiv (ρ₀.map (T t)) π).toReal) ha
+    (fun t ht ↦ (hF ht.1).continuousWithinAt.mono Icc_subset_Ici_self)
+    (fun t ht ↦ (hF ht.1.le).mono (Ioi_subset_Ici ht.1.le))
+    ((hu.continuousOn.mono (uIcc_of_le ha ▸ Icc_subset_Ici_self)).intervalIntegrable.neg)
+  rw [intervalIntegral.integral_neg] at hFTC
+  linarith [ENNReal.toReal_nonneg (a := klDiv (ρ₀.map (T a)) π)]
+
+/-! ### Limit points of the dynamics -/
+
+/-- **Lemma 13 (Limit points have a zero KSD).** Suppose that the standing assumptions hold. Let
+`ρ₀` be a probability measure with `KL(ρ₀ ‖ π) < ∞`, let `(T_t)_{t ≥ 0}` solve the continuous-time
+SVGD equation, and let `ρ_t = (T_t)#ρ₀`. Let `t_n → ∞` and `ρ_∞ ∈ 𝒫(Ω)` be such that
+`ρ_{t_n} ⇀ ρ_∞`. Then, `𝔎(ρ_∞ ∣ π) = 0`. -/
+theorem limit_points_ksd_eq_zero (hKL : klDiv ρ₀ π ≠ ∞) {t : ℕ → ℝ}
+    (ht : Tendsto t atTop atTop) {ρ_lim : Measure (EuclideanSpace ℝ (Fin d))}
+    (hconv : ∀ g : EuclideanSpace ℝ (Fin d) → ℝ, ContinuousOn g Ω →
+      Tendsto (fun n ↦ ∫ x, g x ∂ρ₀.map (T (t n))) atTop (𝓝 (∫ x, g x ∂ρ_lim))) :
+    𝔎[Φ, s] ρ_lim = 0 := by
+  -- For `f` in the closed unit ball of `𝓗`, `E_{ρ_∞}[𝒜_s f_Φ]² = lim E_{ρ_{t_n}}[𝒜_s f_Φ]²`, and
+  -- `E_{ρ_{t_n}}[𝒜_s f_Φ]² ≤ 𝔎(ρ_{t_n} ∣ π) → 0` (Definition 2 and Corollary 2).
+  have hterm (f : closedBall (0 : 𝓗[d, H₀]) 1) :
+      (∫ x, steinOperator s (toVectorField Φ f) x ∂ρ_lim) ^ 2 = 0 := by
+    have hlim := (hconv _ (continuousOn_steinOperator hS f)).pow 2
+    refine le_antisymm (le_of_tendsto_of_tendsto hlim ((ksd_convergence hS hT hKL).comp ht) ?_)
+      (sq_nonneg _)
+    filter_upwards [ht.eventually_ge_atTop 0] with n hn
+    exact sq_integral_steinOperator_le_ksd hS (hT.ae_mem _ hn)
+      (mem_closedBall_zero_iff.1 f.property)
+  -- Thus, every term of the supremum of Definition 2 vanishes.
+  simp [kernelSteinDiscrepancy, hterm]
+
+/-! ### Identification of the limit -/
+
+/-- **Theorem 7 (Convergence to the target distribution).** Suppose that the standing assumptions
+hold, and that the kernel is Stein-universal. Let `ρ₀` be a probability measure with
+`KL(ρ₀ ‖ π) < ∞`, let `(T_t)_{t ≥ 0}` solve the continuous-time SVGD equation, and let
+`ρ_t = (T_t)#ρ₀`. Then, `ρ_t` converges weakly to `π`: `E_{x ∼ ρ_t}[g(x)] → E_{x ∼ π}[g(x)]` for
+every `g ∈ C⁰(Ω)`. -/
+theorem convergence_to_target (hU : IsSteinUniversal Φ s Ω) (hKL : klDiv ρ₀ π ≠ ∞)
+    (g : EuclideanSpace ℝ (Fin d) → ℝ) (hg : ContinuousOn g Ω) :
+    Tendsto (fun t ↦ ∫ x, g x ∂ρ₀.map (T t)) atTop (𝓝 (∫ x, g x ∂π)) := by
+  have : CompactSpace Ω := isCompact_iff_compactSpace.1 hS.isCompact
+  have hΩm := hS.measurableSet
+  have hι := MeasurableEmbedding.subtypeVal hΩm
+  -- The restriction `ρ_t|_Ω` of `ρ_t`, a probability measure on `Ω` (extended by `ρ₀` before `0`).
+  let u (t : ℝ) : ProbabilityMeasure Ω :=
+    ⟨(ρ₀.map (T (max t 0))).comap (↑), hι.isProbabilityMeasure_comap (by
+      rw [Subtype.range_coe]
+      exact hT.ae_mem _ (le_max_right t 0))⟩
+  have hu {t : ℝ} (ht : 0 ≤ t) : (u t : Measure Ω).map (↑) = ρ₀.map (T t) := by
+    rw [ProbabilityMeasure.coe_mk, map_comap_subtypeVal hΩm, max_eq_left ht,
+      Measure.restrict_eq_self_of_ae_mem (hT.ae_mem t ht)]
+  -- Weak convergence in `𝒫(Ω)` gives the convergence of `E[g]` for every `g ∈ C⁰(Ω)`.
+  have hweak {ν : ℕ → ProbabilityMeasure Ω} {ν' : ProbabilityMeasure Ω}
+      (hν : Tendsto ν atTop (𝓝 ν')) (g : EuclideanSpace ℝ (Fin d) → ℝ) (hg : ContinuousOn g Ω) :
+      Tendsto (fun n ↦ ∫ x, g x ∂(ν n : Measure Ω).map (↑)) atTop
+        (𝓝 (∫ x, g x ∂(ν' : Measure Ω).map (↑))) := by
+    have := ProbabilityMeasure.tendsto_iff_forall_integral_tendsto.1 hν
       (BoundedContinuousFunction.mkOfCompact ⟨Ω.domRestrict g, hg.domRestrict⟩)
     simp only [hι.integral_map]
     exact this
-  -- It is enough that every sequence `t_n → ∞` has a subsequence along which
-  -- `E_{μ_t}[g] → E_π[g]`.
+  -- If `E_{ρ_t}[g]` does not tend to `E_π[g]`, there is a sequence `t_n → ∞` along which it stays
+  -- at distance at least `η` from `E_π[g]`. It is thus enough that every sequence `t_n → ∞` has a
+  -- subsequence along which `E_{ρ_t}[g]` tends to `E_π[g]`.
   refine tendsto_of_subseq_tendsto fun ns hns ↦ ?_
-  -- By Prokhorov's theorem (`𝒫(Ω)` is compact and metrizable), `(u (t_n))` has a weakly convergent
-  -- subsequence, with limit `ν`.
-  obtain ⟨ν, -, ψ, hψ, hlim⟩ := isCompact_univ.tendsto_subseq (x := fun n ↦ u (ns n))
+  -- By Prokhorov's theorem, `(ρ_{t_n}|_Ω)` has a weakly convergent subsequence, with limit `ρ_∞`.
+  obtain ⟨ρ_lim, -, ψ, hψ, hlim⟩ := isCompact_univ.tendsto_subseq (x := fun n ↦ u (ns n))
     fun _ ↦ mem_univ _
-  -- Its limit has a null KSD (Lemma B.6), hence is `π` (Proposition 3.2).
-  have hνπ : (ν : Measure Ω).map (↑) = π := by
-    refine (ksd_valid_discrepancy hS hU (ae_map_subtypeVal_mem hS.isCompact.measurableSet)).2
-      (cluster_points' hS hKL hm hmB hmφ (hns.comp hψ.tendsto_atTop)
-        (ae_map_subtypeVal_mem hS.isCompact.measurableSet) fun g hg ↦ ?_)
-    simpa only [Function.comp_def, hu] using hweak hlim g hg
-  exact ⟨ψ, by simpa only [Function.comp_def, hu, hνπ] using hweak hlim g hg⟩
+  have hτ : Tendsto (fun k ↦ ns (ψ k)) atTop atTop := hns.comp hψ.tendsto_atTop
+  have hev : ∀ᶠ k in atTop, ((u (ns (ψ k)) : Measure Ω).map (↑)) = ρ₀.map (T (ns (ψ k))) :=
+    (hτ.eventually_ge_atTop 0).mono fun k hk ↦ hu hk
+  -- Its limit has a zero KSD (Lemma 13), hence is `π` (Proposition 1).
+  have hlim' (g : EuclideanSpace ℝ (Fin d) → ℝ) (hg : ContinuousOn g Ω) :
+      Tendsto (fun k ↦ ∫ x, g x ∂ρ₀.map (T (ns (ψ k)))) atTop
+        (𝓝 (∫ x, g x ∂(ρ_lim : Measure Ω).map (↑))) :=
+    (hweak hlim g hg).congr' (hev.mono fun k hk ↦ by simp only [Function.comp_apply, hk])
+  have hπ : (ρ_lim : Measure Ω).map (↑) = π :=
+    (ksd_vanishes_only_at_target hS hU (ae_map_subtypeVal_mem hΩm)).1
+      (limit_points_ksd_eq_zero hS hT hKL hτ hlim')
+  exact ⟨ψ, by simpa only [hπ] using hlim' g hg⟩
 
-/-- **Weak convergence of SVGD** (Theorem 3.1 of [Serre2025]). Under the standing assumptions, let
-the kernel be Stein-universal and let `μ ∈ 𝒫(Ω)` with `KL(μ ‖ π) < ∞`. Along the mean-field SVGD
-flow, `μ_t = (T_t)#μ` converges weakly to `π`: for every `g` continuous on `Ω`,
-`E_{μ_t}[g] → E_π[g]` as `t → ∞`. -/
-theorem weak_convergence (hU : IsSteinUniversal Φ s Ω) (g : EuclideanSpace ℝ (Fin d) → ℝ)
-    (hg : ContinuousOn g Ω) :
-    Tendsto (fun t ↦ ∫ x, g x ∂μ.map (meanFieldFlow Φ s μ t)) atTop (𝓝 (∫ x, g x ∂π)) :=
-  have ⟨_, hmB⟩ := exists_norm_meanFieldCurve_le (Φ := Φ) (s := s) (μ := μ)
-  weak_convergence' hS hKL continuous_meanFieldCurve hmB
-    (fun _ ↦ meanFieldCurve_eq_direction hS (hS.ae_mem hKL)) hU g hg
-
-end WeakConvergence
-
-end SVGD
-
-/-! ## A Stein-universal kernel on `[-1, 1]`
-
-This section is not in [Serre2025]. It builds a kernel that satisfies all the hypotheses of
-Theorem 3.1 in dimension `1`, on `Ω = [-1, 1]` (`closedBall 0 1`), for every admissible target.
-
-The kernel is `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)`, with the feature map
-`SVGD.intervalFeatureMap : y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of `SVGD.seqFeatureMap`. The polynomial
-`Rₙ` (`SVGD.intervalPoly n`) is the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. Thus it is
-a multiple of `w(t) = 1 - t²`, and `k` is a weighted kernel `w(x) w(y) k₀(x, y)` on `Ω`. The cutoff
-`χ` (`SVGD.intervalCutoff`) equals `1` on `[-2, 2]`. It makes the feature map bounded and Lipschitz
-on `ℝ`. The weights `wₙ` make it `C¹`, as `wₙ (|gₙ| + |gₙ'|) ≤ 2⁻ⁿ` for `gₙ = χ Rₙ`. As the `Rₙ`
-vanish at `±1`, so does the feature map (`SVGD.admissibleFeatureMap_intervalFeatureMap`).
-
-Stein-universality (`SVGD.isSteinUniversal_intervalFeatureMap`) only needs a score `σ` continuous
-on `Ω`. Let `φ` be continuous on `Ω`. The one-dimensional Stein equation `σ u + u' = φ - c` has a
-solution with `u(-1) = u(1) = 0` (`exists_hasDerivAt_sub_sub_mul`). By the Weierstrass
-theorem, `u'` is uniformly close to a polynomial `q = ∑ₙ qₙ tⁿ` on `Ω`. Then `R = ∑ₙ qₙ Rₙ` is
-close to `u` in `C¹(Ω)`, and `𝒜_π R + c = σ R + R' + c` is uniformly close to `φ` on `Ω`.
-
-In dimension `d ≥ 2`, a kernel of this form cannot vanish on the frontier of a box and be
-Stein-universal: at a corner, `ξ_y = 0`. Weighted kernels on domains with a `C²` frontier are not
-formalized. -/
-
-namespace SVGD
-
-open scoped lp
-
-/-- The cutoff `χ` of `SVGD.intervalFeatureMap`: a smooth function on `ℝ`, equal to `1` on
-`[-2, 2]` and supported in `(-3, 3)`. -/
-@[simps]
-def intervalCutoff : ContDiffBump (0 : ℝ) where
-  rIn := 2
-  rOut := 3
-  rIn_pos := two_pos
-  rIn_lt_rOut := by norm_num
-
-/-- The polynomial `Rₙ(t) = (tⁿ⁺¹ - (-1)ⁿ⁺¹) / (n + 1) - mₙ (t + 1)`, with
-`mₙ = (1 - (-1)ⁿ⁺¹) / (2 (n + 1))`: the primitive of `tⁿ - mₙ` that vanishes at `-1` and `1`. -/
-def intervalPoly (n : ℕ) (t : ℝ) : ℝ :=
-  (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1) - (1 - (-1) ^ (n + 1)) / (2 * (n + 1)) * (t + 1)
-
-/-- **A Stein-universal kernel on `[-1, 1]`.** The feature map `y ↦ (wₙ χ(y) Rₙ(y))ₙ ∈ ℓ²(ℕ, ℝ)` of
-the kernel `k(x, y) = ∑ₙ wₙ² χ(x) Rₙ(x) χ(y) Rₙ(y)` on `ℝ`, where `χ = SVGD.intervalCutoff`,
-`Rₙ = SVGD.intervalPoly n` and the weights `wₙ > 0` are those of `SVGD.seqFeatureMap`. -/
-def intervalFeatureMap (y : EuclideanSpace ℝ (Fin 1)) : ℓ²(ℕ, ℝ) :=
-  seqFeatureMap (fun n t ↦ intervalCutoff t * intervalPoly n t) (y 0)
-
-/-- The feature map of a sequence of functions (`CompactSVGD/Definitions.lean`). -/
-example (g : ℕ → ℝ → ℝ) (x : ℝ) :
-    seqFeatureMap g x = ∑' n, (seqWeight g n * g n x) • lp.single 2 n 1 :=
-  rfl
-
-/-- The weights of `SVGD.seqFeatureMap` (`CompactSVGD/Definitions.lean`). -/
-example (g : ℕ → ℝ → ℝ) (n : ℕ) :
-    seqWeight g n = (2⁻¹ : ℝ) ^ n / (1 + ⨆ x, (‖g n x‖ + ‖fderiv ℝ (g n) x‖)) :=
-  rfl
-
-private theorem intervalCutoff_eq_one {t : ℝ} (ht : |t| ≤ 2) : intervalCutoff t = 1 :=
-  intervalCutoff.one_of_mem_closedBall <| by
-    rwa [mem_closedBall, Real.dist_eq, sub_zero, intervalCutoff_rIn]
-
-private theorem intervalPoly_neg_one (n : ℕ) : intervalPoly n (-1) = 0 := by
-  simp [intervalPoly]
-
-private theorem intervalPoly_one (n : ℕ) : intervalPoly n 1 = 0 := by
-  rw [intervalPoly]
-  field_simp
-  ring
-
-private theorem hasDerivAt_intervalPoly (n : ℕ) (t : ℝ) :
-    HasDerivAt (intervalPoly n) (t ^ n - (1 - (-1) ^ (n + 1)) / (2 * (n + 1))) t := by
-  have h₁ : HasDerivAt (fun t : ℝ ↦ (t ^ (n + 1) - (-1) ^ (n + 1)) / (n + 1)) (t ^ n) t := by
-    convert ((hasDerivAt_pow (n + 1) t).sub_const ((-1 : ℝ) ^ (n + 1))).div_const
-      ((n : ℝ) + 1) using 1
-    rw [Nat.add_sub_cancel]
-    push_cast
-    field_simp
-  have h₂ := ((hasDerivAt_id t).add_const 1).const_mul ((1 - (-1 : ℝ) ^ (n + 1)) / (2 * (n + 1)))
-  rw [mul_one] at h₂
-  exact h₁.sub h₂
-
-private theorem contDiff_intervalCutoff_mul (n : ℕ) :
-    ContDiff ℝ 1 fun t ↦ intervalCutoff t * intervalPoly n t :=
-  intervalCutoff.contDiff.mul (by unfold intervalPoly; fun_prop)
-
-private theorem bddAbove_intervalCutoff_mul (n : ℕ) :
-    BddAbove (range fun t ↦ ‖intervalCutoff t * intervalPoly n t‖ +
-      ‖fderiv ℝ (fun t ↦ intervalCutoff t * intervalPoly n t) t‖) := by
-  have hc : HasCompactSupport fun t ↦ intervalCutoff t * intervalPoly n t :=
-    intervalCutoff.hasCompactSupport.mul_right
-  have hf := contDiff_intervalCutoff_mul n
-  exact (hf.continuous.norm.add (hf.continuous_fderiv one_ne_zero).norm)
-    |>.bddAbove_range_of_hasCompactSupport (hc.norm.add (hc.fderiv ℝ).norm)
-
-/-- **The kernel of `SVGD.intervalFeatureMap` is admissible** on `Ω = [-1, 1]`: its feature map is
-`C¹`, `2`-Lipschitz, bounded by `2`, and vanishes at `±1`. -/
-theorem admissibleFeatureMap_intervalFeatureMap :
-    AdmissibleFeatureMap intervalFeatureMap (closedBall 0 1) 2 2 := by
-  refine ⟨(contDiff_seqFeatureMap contDiff_intervalCutoff_mul bddAbove_intervalCutoff_mul).comp
-    (by fun_prop : ContDiff ℝ 1 fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0), ?_,
-    fun y ↦ norm_seqFeatureMap_le bddAbove_intervalCutoff_mul (y 0), fun y hy ↦ ?_⟩
-  · have h : LipschitzWith 1 fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0 :=
-      LipschitzWith.of_dist_le_mul fun y z ↦ by
-        simpa [dist_eq_norm] using PiLp.norm_apply_le (y - z) 0
-    have := (lipschitzWith_seqFeatureMap contDiff_intervalCutoff_mul
-      bddAbove_intervalCutoff_mul).comp h
-    rwa [mul_one] at this
-  · rw [frontier_closedBall 0 one_ne_zero, mem_sphere_zero_iff_norm,
-      EuclideanSpace.norm_fin_one, Real.norm_eq_abs] at hy
-    refine seqFeatureMap_eq_zero fun n ↦ ?_
-    rcases (abs_eq zero_le_one).1 hy with h | h <;> simp [h, intervalPoly_one, intervalPoly_neg_one]
-
-/-- In dimension `1`, if `⟪h, Φ y⟫ = G(y₀)` for every `y`, then the Stein operator of the vector
-field of `h` is `𝒜 h (x) = s x (e₀) G(x₀) + G'(x₀)`. -/
-private theorem steinOperator_eq_of_inner_eq {H₀ : Type*} [NormedAddCommGroup H₀]
-    [InnerProductSpace ℝ H₀] {Φ : EuclideanSpace ℝ (Fin 1) → H₀}
-    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))} {h : H₀} {G : ℝ → ℝ}
-    (hG : Differentiable ℝ G) (hΦ : ∀ y, ⟪h, Φ y⟫ = G (y 0)) (x : EuclideanSpace ℝ (Fin 1)) :
-    steinOperator s (toVectorField Φ (WithLp.toLp 2 fun _ ↦ h : 𝓗[1, H₀])) x =
-      s x (EuclideanSpace.single 0 1) * G (x 0) + deriv G (x 0) := by
-  have hV : toVectorField Φ (WithLp.toLp 2 fun _ ↦ h : 𝓗[1, H₀]) =
-      fun y ↦ G (y 0) • EuclideanSpace.single 0 1 := by
-    funext y
-    ext i
-    fin_cases i
-    simp [hΦ]
-  have h₁ : HasDerivAt G (deriv G (x 0)) (EuclideanSpace.proj (0 : Fin 1) x) :=
-    (hG (x 0)).hasDerivAt
-  have h₂ :=
-    (h₁.comp_hasFDerivAt x (EuclideanSpace.proj (𝕜 := ℝ) (0 : Fin 1)).hasFDerivAt).smul_const
-      (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1))
-  have hd : fderiv ℝ (fun y : EuclideanSpace ℝ (Fin 1) ↦
-      G (y 0) • (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1))) x =
-      (deriv G (x 0) • EuclideanSpace.proj (𝕜 := ℝ) (0 : Fin 1)).smulRight
-        (EuclideanSpace.single 0 1 : EuclideanSpace ℝ (Fin 1)) :=
-    h₂.fderiv
-  rw [steinOperator, hV, divergence_euclideanSpace, hd]
-  simp [mul_comm]
-
-/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|m| ≤ δ`. -/
-private theorem abs_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
-    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
-    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) : |m| ≤ δ := by
-  -- `∫₋₁¹ (e - m) = f(1) - f(-1) = 0`, so `2 m = ∫₋₁¹ e`, and `|∫₋₁¹ e| ≤ 2 δ`.
-  have h₁ : ∫ τ in (-1)..1, (e τ - m) = 0 := by
-    rw [intervalIntegral.integral_eq_sub_of_hasDerivAt (fun τ _ ↦ hf τ)
-      ((he.sub continuous_const).intervalIntegrable _ _), ha, hb, sub_zero]
-  rw [intervalIntegral.integral_sub (he.intervalIntegrable _ _) intervalIntegrable_const,
-    intervalIntegral.integral_const] at h₁
-  have h₂ : ‖∫ τ in (-1)..1, e τ‖ ≤ δ * |1 - (-1)| :=
-    intervalIntegral.norm_integral_le_of_norm_le_const fun τ hτ ↦ by
-      rw [uIoc_of_le (by norm_num)] at hτ
-      exact (Real.norm_eq_abs _).trans_le (heδ τ (Ioc_subset_Icc_self hτ))
-  have h₃ : ∫ τ in (-1)..1, e τ = 2 * m := by
-    norm_num at h₁
-    linarith
-  rw [h₃, Real.norm_eq_abs, abs_mul] at h₂
-  norm_num at h₂
-  linarith
-
-/-- If `f(-1) = f(1) = 0` and `f' = e - m` with `|e| ≤ δ` on `[-1, 1]`, then `|f| ≤ 4 δ` on
-`[-1, 1]`. -/
-private theorem abs_apply_le_of_hasDerivAt_sub {f e : ℝ → ℝ} {m δ : ℝ}
-    (hf : ∀ t, HasDerivAt f (e t - m) t) (he : Continuous e) (ha : f (-1) = 0) (hb : f 1 = 0)
-    (heδ : ∀ t ∈ Icc (-1 : ℝ) 1, |e t| ≤ δ) {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) :
-    |f t| ≤ 4 * δ := by
-  have hm := abs_le_of_hasDerivAt_sub hf he ha hb heδ
-  -- `f(t) = ∫₋₁ᵗ (e - m)`, with `|e - m| ≤ 2 δ` on `[-1, t]`.
-  have hint : ∫ τ in (-1)..t, (e τ - m) = f t := by
-    rw [intervalIntegral.integral_eq_sub_of_hasDerivAt (fun τ _ ↦ hf τ)
-      ((he.sub continuous_const).intervalIntegrable _ _), ha, sub_zero]
-  rw [← hint, ← Real.norm_eq_abs]
-  calc ‖∫ τ in (-1)..t, (e τ - m)‖ ≤ 2 * δ * |t - (-1)| :=
-        intervalIntegral.norm_integral_le_of_norm_le_const fun τ hτ ↦ by
-          rw [uIoc_of_le ht.1] at hτ
-          rw [Real.norm_eq_abs]
-          exact (abs_sub _ _).trans (by linarith [heδ τ ⟨hτ.1.le, hτ.2.trans ht.2⟩])
-    _ ≤ 2 * δ * 2 := by
-        refine mul_le_mul_of_nonneg_left ?_ (by linarith [abs_nonneg m])
-        rw [abs_le]
-        constructor <;> linarith [ht.1, ht.2]
-    _ = 4 * δ := by ring
-
-/-- **The kernel of `SVGD.intervalFeatureMap` is Stein-universal** on `Ω = [-1, 1]`, for every
-score `s` continuous on `Ω`. -/
-theorem isSteinUniversal_intervalFeatureMap
-    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
-    (hs : ContinuousOn s (closedBall 0 1)) :
-    IsSteinUniversal intervalFeatureMap s (closedBall 0 1) := by
-  have hp : Continuous fun y : EuclideanSpace ℝ (Fin 1) ↦ y 0 := by fun_prop
-  have hΩ {x : EuclideanSpace ℝ (Fin 1)} : x ∈ closedBall 0 1 ↔ x 0 ∈ Icc (-1 : ℝ) 1 := by
-    rw [mem_closedBall_zero_iff, EuclideanSpace.norm_fin_one, Real.norm_eq_abs, abs_le, mem_Icc]
-  -- The map `ι : ℝ → Ω`, `t ↦ ρ(t) e₀`, where `ρ` is the projection of `ℝ` onto `[-1, 1]`.
-  have h₁ : (-1 : ℝ) ≤ 1 := by norm_num
-  let ι : ℝ → EuclideanSpace ℝ (Fin 1) := fun t ↦
-    (projIcc (-1) 1 h₁ t : ℝ) • EuclideanSpace.single 0 1
-  have hιΩ (t : ℝ) : ι t ∈ closedBall (0 : EuclideanSpace ℝ (Fin 1)) 1 :=
-    hΩ.2 (by simp [ι])
-  have hιc : Continuous ι := (continuous_subtypeVal.comp continuous_projIcc).smul continuous_const
-  have hιx {x : EuclideanSpace ℝ (Fin 1)} (hx : x ∈ closedBall 0 1) : ι (x 0) = x := by
-    simp [ι, projIcc_of_mem h₁ (hΩ.1 hx), EuclideanSpace.apply_zero_smul_single_fin_one]
-  -- The score `σ` and the function `φ'` to approximate, on `ℝ`.
-  let σ : ℝ → ℝ := fun t ↦ s (ι t) (EuclideanSpace.single 0 1)
-  have hσ : Continuous σ := (hs.comp_continuous hιc hιΩ).clm_apply continuous_const
-  refine fun φ ↦ Metric.mem_closure_iff.2 fun ε hε ↦ ?_
-  let φ' : ℝ → ℝ := fun t ↦ φ ⟨ι t, hιΩ t⟩
-  have hφ' : Continuous φ' := φ.continuous.comp (hιc.subtype_mk hιΩ)
-  -- The solution `u` of the Stein equation `σ u + u' = φ' - c` with `u(-1) = u(1) = 0`.
-  obtain ⟨c, u, hua, hub, hu⟩ := exists_hasDerivAt_sub_sub_mul hσ hφ' (-1) 1
-  let u' : ℝ → ℝ := fun t ↦ φ' t - c - σ t * u t
-  have huc : Continuous u := continuous_iff_continuousAt.2 fun t ↦ (hu t).continuousAt
-  have hu'c : Continuous u' := (hφ'.sub continuous_const).sub (hσ.mul huc)
-  obtain ⟨S, hS⟩ := isCompact_Icc.exists_bound_of_continuousOn
-    (hσ.continuousOn (s := Icc (-1 : ℝ) 1))
-  set δ := ε / (2 * (2 + 4 * |S|)) with hδ_def
-  have hδ : 0 < δ := by positivity
-  -- A polynomial `q` close to `u'` on `[-1, 1]`, and `R = ∑ₙ qₙ Rₙ`, with `R' = q - m`.
-  obtain ⟨q, hq⟩ := exists_polynomial_near_of_continuousOn (-1) 1 u' hu'c.continuousOn δ hδ
-  let N := q.natDegree + 1
-  let m : ℝ := ∑ n ∈ Finset.range N, q.coeff n * ((1 - (-1) ^ (n + 1)) / (2 * (n + 1)))
-  let R : ℝ → ℝ := fun t ↦ ∑ n ∈ Finset.range N, q.coeff n * intervalPoly n t
-  have hR (t : ℝ) : HasDerivAt R (q.eval t - m) t := by
-    convert HasDerivAt.fun_sum (u := Finset.range N) fun n _ ↦
-      (hasDerivAt_intervalPoly n t).const_mul (q.coeff n) using 1
-    rw [Polynomial.eval_eq_sum_range, ← Finset.sum_sub_distrib]
-    exact Finset.sum_congr rfl fun n _ ↦ by ring
-  -- `R - u` vanishes at `±1`, with derivative `(q - u') - m` and `|q - u'| ≤ δ` on `[-1, 1]`.
-  -- Thus `|m| ≤ δ` and `|R - u| ≤ 4 δ` on `[-1, 1]`.
-  have hD (t : ℝ) : HasDerivAt (fun t ↦ R t - u t) ((q.eval t - u' t) - m) t :=
-    ((hR t).sub (hu t)).congr_deriv (by simp only [u']; ring)
-  have hDa : R (-1) - u (-1) = 0 := by simp [R, intervalPoly_neg_one, hua]
-  have hDb : R 1 - u 1 = 0 := by simp [R, intervalPoly_one, hub]
-  have hqδ (t : ℝ) (ht : t ∈ Icc (-1 : ℝ) 1) : |q.eval t - u' t| ≤ δ := (hq t ht).le
-  have hqc : Continuous fun t ↦ q.eval t - u' t := q.continuous.sub hu'c
-  have hm : |m| ≤ δ := abs_le_of_hasDerivAt_sub hD hqc hDa hDb hqδ
-  -- The element `h` of `ℓ²` with `⟪h, Φ y⟫ = G(y₀)`, where `G = χ R` equals `R` near `[-1, 1]`.
-  let G : ℝ → ℝ := fun t ↦ ∑ n ∈ Finset.range N, q.coeff n * (intervalCutoff t * intervalPoly n t)
-  obtain ⟨h, hh⟩ :=
-    exists_inner_seqFeatureMap_eq bddAbove_intervalCutoff_mul q.coeff (Finset.range N)
-  have hGc : ContDiff ℝ 1 G :=
-    ContDiff.sum fun n _ ↦ contDiff_const.mul (contDiff_intervalCutoff_mul n)
-  have hGR {t : ℝ} (ht : t ∈ Icc (-1 : ℝ) 1) : G =ᶠ[𝓝 t] R := by
-    filter_upwards [Metric.ball_mem_nhds t one_pos] with τ hτ
-    rw [mem_ball, Real.dist_eq, abs_sub_lt_iff] at hτ
-    have hχ : intervalCutoff τ = 1 :=
-      intervalCutoff_eq_one (abs_le.2 ⟨by linarith [ht.1], by linarith [ht.2]⟩)
-    simp [G, R, hχ]
-  -- The Stein operator of `f = (h) ∈ 𝓗` is `s e₀ G + G'`.
-  set f : 𝓗[1, ℓ²(ℕ, ℝ)] := WithLp.toLp 2 fun _ ↦ h
-  have hA (x : EuclideanSpace ℝ (Fin 1)) :
-      steinOperator s (toVectorField intervalFeatureMap f) x =
-        s x (EuclideanSpace.single 0 1) * G (x 0) + deriv G (x 0) :=
-    steinOperator_eq_of_inner_eq (hGc.differentiable one_ne_zero) (fun y ↦ hh (y 0)) x
-  have hcont : ContinuousOn (fun x ↦ steinOperator s (toVectorField intervalFeatureMap f) x + c)
-      (closedBall 0 1) := by
-    simp_rw [hA]
-    exact (((hs.clm_apply continuousOn_const).mul (hGc.continuous.comp hp).continuousOn).add
-      ((hGc.continuous_deriv le_rfl).comp hp).continuousOn).add continuousOn_const
-  refine ⟨⟨_, hcont.domRestrict⟩, ⟨f, c, fun x ↦ rfl⟩, ?_⟩
-  -- On `Ω`, `φ - 𝒜 f - c = -((q - u') - m) - σ (R - u)`.
-  refine ((ContinuousMap.dist_le (by positivity)).2 fun x ↦ ?_).trans_lt (half_lt_self hε)
-  obtain ⟨x, hx⟩ := x
-  have ht : x 0 ∈ Icc (-1 : ℝ) 1 := hΩ.1 hx
-  have hσt : s x (EuclideanSpace.single 0 1) = σ (x 0) := by
-    change _ = s (ι (x 0)) _
-    rw [hιx hx]
-  have hφt : φ ⟨x, hx⟩ = φ' (x 0) := congrArg φ (Subtype.ext (hιx hx).symm)
-  have hσS : |σ (x 0)| ≤ |S| := by
-    have := hS _ ht
-    rw [Real.norm_eq_abs] at this
-    exact this.trans (le_abs_self S)
-  have hRu : |R (x 0) - u (x 0)| ≤ 4 * δ := abs_apply_le_of_hasDerivAt_sub hD hqc hDa hDb hqδ ht
-  simp only [ContinuousMap.coe_mk, domRestrict_apply, hA, (hGR ht).eq_of_nhds,
-    ((hR (x 0)).congr_of_eventuallyEq (hGR ht)).deriv, hσt, hφt, Real.dist_eq]
-  calc |φ' (x 0) - (σ (x 0) * R (x 0) + (q.eval (x 0) - m) + c)|
-      = |-(q.eval (x 0) - u' (x 0) - m) - σ (x 0) * (R (x 0) - u (x 0))| := by
-        congr 1
-        simp only [u']
-        ring
-    _ ≤ |q.eval (x 0) - u' (x 0) - m| + |σ (x 0)| * |R (x 0) - u (x 0)| := by
-        rw [← abs_mul, ← abs_neg (q.eval (x 0) - u' (x 0) - m)]
-        exact abs_sub _ _
-    _ ≤ 2 * δ + |S| * (4 * δ) := by
-        gcongr
-        exact (abs_sub _ _).trans (by linarith [hqδ _ ht])
-    _ = ε / 2 := by
-        rw [hδ_def]
-        field_simp
-
-/-- **Weak convergence of SVGD on `[-1, 1]`** (Theorem 3.1 of [Serre2025] in dimension `1`, with an
-explicit kernel). Let `π` be an admissible target on `Ω = [-1, 1]` and let `μ ∈ 𝒫(Ω)` with
-`KL(μ ‖ π) < ∞`. Along the mean-field SVGD flow of the kernel of `SVGD.intervalFeatureMap`,
-`μ_t ⇀ π`: for every `g` continuous on `Ω`, `E_{μ_t}[g] → E_π[g]` as `t → ∞`. -/
-theorem weak_convergence_intervalFeatureMap {π μ : Measure (EuclideanSpace ℝ (Fin 1))}
-    {p : EuclideanSpace ℝ (Fin 1) → ℝ}
-    {s : EuclideanSpace ℝ (Fin 1) → StrongDual ℝ (EuclideanSpace ℝ (Fin 1))}
-    (hπ : AdmissibleTarget (closedBall 0 1) π p s) [IsProbabilityMeasure μ] (hKL : klDiv μ π ≠ ∞)
-    (g : EuclideanSpace ℝ (Fin 1) → ℝ) (hg : ContinuousOn g (closedBall 0 1)) :
-    Tendsto (fun t ↦ ∫ x, g x ∂μ.map (meanFieldFlow intervalFeatureMap s μ t)) atTop
-      (𝓝 (∫ x, g x ∂π)) :=
-  weak_convergence ⟨isCompact_closedBall 0 1, hπ, admissibleFeatureMap_intervalFeatureMap⟩ hKL
-    (isSteinUniversal_intervalFeatureMap hπ.continuousOn_score) g hg
+end KSDConvergence
 
 end SVGD
