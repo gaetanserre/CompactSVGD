@@ -37,10 +37,12 @@ they can be checked by hand in one place. The other files only contain lemmas.
 ## Website
 
 The results are presented on the website of the project,
-[gaetanserre.fr/CompactSVGD](https://gaetanserre.fr/CompactSVGD/), in the order of `Paper.lean`. It
-first lists what they rest on, i.e. the libraries, the axioms and the definitions to trust. Then,
-each result comes with its mathematical statement, a map or a sketch of its proof, and its Lean
-statement and proof. The website is generated from [`showcase/showcase.md`](showcase/showcase.md) by
+[gaetanserre.fr/CompactSVGD](https://gaetanserre.fr/CompactSVGD/). It first shows the three main
+results, Theorems 4, 6 and 7, with a map of their proofs. Then, it lists what they rest on, i.e. the
+libraries, the axioms and the definitions to trust. Finally, the full development follows the order
+of `Paper.lean`, and each result comes with its mathematical statement, a map or a sketch of its
+proof, and its Lean statement and proof. The website is generated from
+[`showcase/showcase.md`](showcase/showcase.md) by
 [Showcase](https://github.com/gaetanserre/LeanShowcase). The API documentation is at
 [gaetanserre.fr/CompactSVGD/docs](https://gaetanserre.fr/CompactSVGD/docs/).
 

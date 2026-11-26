@@ -10,6 +10,12 @@ abstract: >
   discrepancy, and that the dynamics converges weakly to $\pi$ when the kernel is Stein-universal.
   There is no `sorry`.
 module: CompactSVGD.Paper
+# The main results, shown first on the overview with their proof maps.
+main:
+  - SVGD.IsSolution | Definition
+  - SVGD.exists_continuous_time_dynamics | Theorem 4
+  - SVGD.time_derivative_kl | Theorem 6
+  - SVGD.convergence_to_target | Theorem 7
 trusted:
   - CompactSVGD.Definitions
 docgen: https://gaetanserre.fr/CompactSVGD/docs/
@@ -770,7 +776,8 @@ with $\rho_t = (T_t)_\# \rho_0$, the following conditions hold.
 (iii) $\rho_t(\mathbb{R}^d \setminus \Omega) = 0$ for every $t \ge 0$.
 
 (iv) For all $x \in \mathbb{R}^d$ and $t \ge 0$,
-$\frac{d}{dt} T_t(x) = b(T_t(x), \rho_t)$, with a right derivative at $t = 0$.
+$\frac{d}{dt} T_t(x) = b(T_t(x), \rho_t)$, with a right derivative at $t = 0$, where
+$b(x, \rho) = (\phi^*_\rho)_\Phi(x)$ is the [drift](#SVGD.drift).
 ```
 
 This equation is not a standard differential equation. The drift $b(\cdot, \rho_t)$ depends on the
@@ -783,7 +790,7 @@ distribution of the particles, which depends on their positions, which are the u
 ```informal SVGD.exists_continuous_time_dynamics | Existence of the continuous-time dynamics
 Suppose that the standing assumptions hold and that $H_0$ is complete. Let
 $\rho_0 \in \mathcal{P}(\Omega)$. Then, there exists a family $(T_t)_{t \ge 0}$ of maps from
-$\mathbb{R}^d$ to $\mathbb{R}^d$ that solves the continuous-time SVGD equation from $\rho_0$.
+$\mathbb{R}^d$ to $\mathbb{R}^d$ that solves the [continuous-time SVGD equation](#SVGD.IsSolution) from $\rho_0$.
 ```
 
 ```diagram SVGD.exists_continuous_time_dynamics
@@ -1009,13 +1016,13 @@ $x$. The mean of a function with values in a closed convex set lies in this set
 Suppose that the standing assumptions hold. Let $\rho_0$ be a measure on $\mathbb{R}^d$ such that
 $\rho_0(\mathbb{R}^d \setminus \Omega) = 0$. Let $m : \mathbb{R} \to \mathcal{H}$ be continuous,
 with values in $\mathcal{W}$, and consistent. Then, the maps $T_t = T^m_t$ solve the
-continuous-time SVGD equation from $\rho_0$.
+[continuous-time SVGD equation](#SVGD.IsSolution) from $\rho_0$.
 ```
 
 ```sketch SVGD.consistent_candidate_isSolution
 By [Lemma 6](#SVGD.witness_set_norm_le), $m$ is bounded by $B$, and [Lemma 5](#SVGD.positions_image)
 keeps the particles in $\Omega$. As $m(t) = \phi^*_{\rho_t}$, the equation of Lemma 5 is the
-continuous-time SVGD equation.
+[continuous-time SVGD equation](#SVGD.IsSolution).
 ```
 
 ### A consistent candidate on a bounded time interval
@@ -1107,7 +1114,7 @@ $m(t) = \phi^*_{\rho_t}$ for $t \ge 0$, extended to negative times by $m(0)$.
 
 ```informal SVGD.solution_properties_dist_le | Properties of the solutions, continuity of the Stein witness
 Suppose that the standing assumptions hold. Let $\rho_0$ be a probability measure on
-$\mathbb{R}^d$, let $(T_t)_{t \ge 0}$ solve the continuous-time SVGD equation from $\rho_0$, and let
+$\mathbb{R}^d$, let $(T_t)_{t \ge 0}$ solve the [continuous-time SVGD equation](#SVGD.IsSolution) from $\rho_0$, and let
 $m$ be the curve of its Stein witnesses. Let $B \ge 0$ such that $\|\xi_x\|_{\mathcal{H}} \le B$ for
 every $x \in \Omega$. Then,
 $$\forall t, t' \ge 0, \quad \|m(t) - m(t')\|_{\mathcal{H}} \le \omega(B C |t - t'|).$$
@@ -1190,7 +1197,7 @@ distribution at every time. Thus, the divergence decreases at rate $\mathfrak{K}
 ```informal SVGD.time_derivative_kl | Time derivative of the KL divergence
 Suppose that the standing assumptions hold and that $H_0$ is complete. Let $\rho_0$ be a probability
 measure on $\mathbb{R}^d$ such that $\mathrm{KL}(\rho_0 \,\|\, \pi) < \infty$. Let $(T_t)_{t \ge 0}$
-solve the continuous-time SVGD equation from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Then,
+solve the [continuous-time SVGD equation](#SVGD.IsSolution) from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Then,
 $t \mapsto \mathrm{KL}(\rho_t \,\|\, \pi)$ is differentiable on $[0, \infty)$, with a right
 derivative at $0$, and
 $$\forall t \ge 0, \quad \frac{d}{dt} \mathrm{KL}(\rho_t \,\|\, \pi) = -\mathfrak{K}(\rho_t \mid \pi).$$
@@ -1256,7 +1263,7 @@ $v_t = b(\cdot, \rho_t)$ be the velocity field at time $t$.
 
 ```informal SVGD.jacobian_differentiable | Jacobian of $T_t$, differentiability
 Suppose that the standing assumptions hold. Let $\rho_0$ be a probability measure on
-$\mathbb{R}^d$, and let $(T_t)_{t \ge 0}$ solve the continuous-time SVGD equation from $\rho_0$.
+$\mathbb{R}^d$, and let $(T_t)_{t \ge 0}$ solve the [continuous-time SVGD equation](#SVGD.IsSolution) from $\rho_0$.
 Then, $T_t$ is differentiable on $\mathbb{R}^d$ for every $t \ge 0$.
 ```
 
@@ -1444,8 +1451,8 @@ goal <- ext, target
 ```informal SVGD.convergence_to_target | Convergence to the target distribution
 Suppose that the standing assumptions hold, that $H_0$ is complete, and that the kernel is
 Stein-universal. Let $\rho_0$ be a probability measure on $\mathbb{R}^d$ such that
-$\mathrm{KL}(\rho_0 \,\|\, \pi) < \infty$. Let $(T_t)_{t \ge 0}$ solve the continuous-time SVGD
-equation from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Then, for every $g \in C^0(\Omega)$,
+$\mathrm{KL}(\rho_0 \,\|\, \pi) < \infty$. Let $(T_t)_{t \ge 0}$ solve the [continuous-time SVGD
+equation](#SVGD.IsSolution) from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Then, for every $g \in C^0(\Omega)$,
 $$\mathbb{E}_{x \sim \rho_t}[g(x)] \xrightarrow[t \to \infty]{} \mathbb{E}_{x \sim \pi}[g(x)].$$
 ```
 
@@ -1511,8 +1518,8 @@ $u \ge \eta / 2$ on intervals $[t_n, t_n + \delta]$, whose contributions make th
 
 ```informal SVGD.ksd_uniform_continuity_le | Uniform continuity of the KSD, bound
 Suppose that the standing assumptions hold and that $H_0$ is complete. Let $\rho_0$ be a
-probability measure on $\mathbb{R}^d$, let $(T_t)_{t \ge 0}$ solve the continuous-time SVGD
-equation from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Let $B \ge 0$ such that
+probability measure on $\mathbb{R}^d$, let $(T_t)_{t \ge 0}$ solve the [continuous-time SVGD
+equation](#SVGD.IsSolution) from $\rho_0$, and let $\rho_t = (T_t)_\# \rho_0$. Let $B \ge 0$ such that
 $\|\xi_x\|_{\mathcal{H}} \le B$ for every $x \in \Omega$. Then,
 $$\forall t, t' \ge 0, \quad |\mathfrak{K}(\rho_t \mid \pi) - \mathfrak{K}(\rho_{t'} \mid \pi)| \le 2 B \, \omega(B C |t - t'|).$$
 ```
