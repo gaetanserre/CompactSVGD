@@ -12,7 +12,6 @@ abstract: >
 module: CompactSVGD.Paper
 # The main results, shown first on the overview with their proof maps.
 main:
-  - SVGD.IsSolution | Definition
   - SVGD.exists_continuous_time_dynamics | Theorem 4
   - SVGD.time_derivative_kl | Theorem 6
   - SVGD.convergence_to_target | Theorem 7
